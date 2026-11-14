@@ -263,7 +263,7 @@ input[type=file]{width:100%}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, sendPasswordResetEmail, deleteUser } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
 
 const cfg = {
   "apiKey": "AIzaSyDamgo5t-QPHjOoazkp1n5xzgL-HwsKfWk",
@@ -319,6 +319,8 @@ window.QFB = {
   setPasswordOther: async (e, oldp, newp) => { const c = await signInWithEmailAndPassword(secAuth, e, oldp); await updatePassword(c.user, newp); await signOut(secAuth); },
   setPassword: p => updatePassword(auth.currentUser, p),
   resetEmail: e => sendPasswordResetEmail(auth, e),
+  email: () => (auth.currentUser && auth.currentUser.email) || '',
+  changeEmail: async (n, p) => { const u = auth.currentUser; await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, p)); await verifyBeforeUpdateEmail(u, n); },
   signOut: () => signOut(auth),
   dropCurrent: () => deleteUser(auth.currentUser)
 };
@@ -427,10 +429,13 @@ function startFamily(fid,role){
 function lookup(code){
   return db.doc('codes/'+code).get().then(function(s){return s.exists?s.data().fid:null});
 }
+function lookupKids(code){
+  return db.doc('codes/'+code).get().then(function(s){return s.exists?{fid:s.data().fid,kids:Array.isArray(s.data().kids)?s.data().kids:[]}:null});
+}
 function enter(pid,role){S.pid=pid;S.chan='family';S.qf='all';S.enterAt=Date.now();setTimeout(schedule,4200);S.tab=role==='tuteur'?'valider':'quetes';S.step='app';LS.set('qf-fid',S.fid);LS.set('qf-pid',pid);saveSession();closeSheet();render();window.scrollTo(0,0)}
 function saveSession(){return;if(!S.uid||S.readonly||!db)return;try{db.doc('data/users/'+S.uid+'/session').set({fid:S.fid||'',pid:S.pid||''}).catch(function(){})}catch(e){}}
 function signOutAll(){forget();S.step='welcome';try{window.QFB.signOut()}catch(e){}}
-function forget(){S.chan='family';S.qf='all';stopFamily();LS.del('qf-fid');LS.del('qf-pid');S.pid=null;S.kf=null;saveSession()}
+function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();LS.del('qf-fid');LS.del('qf-pid');S.pid=null;S.kf=null;saveSession()}
 
 /* ---------- Vues d'accueil ---------- */
 var vLoading=function(){return '<div class="center"><span class="coin big spin">'+ic('star')+'</span><p class="muted">'+(S.slow?'La base de données ne répond pas encore.':'Ouverture du carnet…')+'</p>'+(S.slow&&S.fid?'<button class="link" data-a="leave">Quitter cette famille sur cet appareil</button>':'')+'</div>'};
@@ -454,13 +459,20 @@ function vTutor(){
 }
 var vKid=function(){return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Rejoindre ma famille</h1><p class="lead">Demande le code famille à un tuteur.</p><form data-submit="lookupKid" style="margin-top:18px"><div class="field"><label for="k-code">Code famille</label><input id="k-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Continuer</button></form></section>'};
 var passField=function(id,req){return '<div class="field"><label for="'+id+'">Mot de passe</label><input id="'+id+'" type="password" autocomplete="new-password"><small>6 caractères minimum.</small></div>'};
+var kidForm=function(){
+  var lk=S.lk;
+  if(!lk)return '<form data-submit="kidCode"><div class="field"><label for="l-code">Code famille</label><input id="l-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123" value="'+esc(LS.get('qf-code')||'')+'"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Continuer</button></form>';
+  var who=lk.kids.length?
+    '<div class="field"><span class="lbl">Qui es-tu ?</span><div class="pills">'+lk.kids.map(function(n){return '<button type="button" class="pill'+(S.lkSel===n?' on':'')+'" data-a="lkPick" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div></div>':
+    '<p class="muted">Aucun profil n\'est encore enregistré pour ce code. Saisis ton pseudo.</p><div class="field"><label for="l-pseudo">Pseudo</label><input id="l-pseudo" type="text" maxlength="24" autocomplete="username" autocapitalize="off"></div>';
+  return '<form data-submit="doLogin"><p class="muted">Famille <b>'+esc(fmtCode(lk.code))+'</b> · <button type="button" class="link" data-a="lkReset">Changer</button></p>'+who+'<div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Me connecter</button></form>';
+};
 var vLogin=function(){
   var k=S.lmode==='kid';
   var tabs='<div class="seg"><button class="'+(k?'':'on')+'" data-a="lmode" data-v="tutor">Tuteur</button><button class="'+(k?'on':'')+'" data-a="lmode" data-v="kid">Mineur</button></div>';
-  var f=k?
-   '<form data-submit="doLogin"><div class="field"><label for="l-code">Code famille</label><input id="l-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123" value="'+esc(LS.get('qf-code')||'')+'"></div><div class="field"><label for="l-pseudo">Pseudo</label><input id="l-pseudo" type="text" maxlength="24" autocomplete="username" autocapitalize="off"></div><div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Me connecter</button></form>':
+  var f=k?kidForm():
    '<form data-submit="doLogin"><div class="field"><label for="l-email">Adresse e-mail</label><input id="l-email" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Me connecter</button><button class="link" type="button" data-a="forgot">Mot de passe oublié ?</button></form>';
-  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Se connecter</h1><p class="lead">'+(k?'Avec le code de ta famille, ton pseudo et ton mot de passe.':'Avec ton adresse e-mail et ton mot de passe.')+'</p>'+tabs+f+'</section>';
+  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Se connecter</h1><p class="lead">'+(k?'Entre le code de ta famille, choisis ton prénom, puis ton mot de passe.':'Avec ton adresse e-mail et ton mot de passe.')+'</p>'+tabs+f+'</section>';
 };
 var newKidForm=function(enterAfter){return '<form data-submit="newKid" data-enter="0"><div class="field"><label for="n-pseudo">Pseudo</label><input id="n-pseudo" type="text" maxlength="20" autocomplete="off"></div><div class="field"><label for="n-age">Âge</label><input id="n-age" type="number" inputmode="numeric" min="3" max="17"></div><div class="field"><label for="n-pass">Mot de passe du mineur</label><input id="n-pass" type="password" autocomplete="new-password"><small>6 caractères minimum. Tu pourras le revoir ou le changer. Pour se connecter, le mineur utilisera le code famille, son pseudo et ce mot de passe.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Ajouter</button></form>'};
 var kidRows=function(){var ks=kids();if(!S.got.people)return '<p class="muted">Chargement…</p>';if(!ks.length)return '<p class="muted">Aucun mineur pour l\'instant. Crée ton profil ci-dessous.</p>';return ks.map(function(k){return '<button class="row" data-a="pickKid" data-id="'+esc(k.id)+'">'+av(k)+'<span class="grow"><b>'+esc(k.pseudo)+'</b><small>'+(k.age?k.age+' ans':'Mineur')+'</small></span><span class="bal">'+coin()+bal(k.id)+'</span></button>'}).join('')};
@@ -650,7 +662,7 @@ function renderInner(){
     case 'welcome':mount('welcome',vWelcome());break;
     case 'tutor':mount('tutor-'+S.tmode,vTutor());break;
     case 'kid':mount('kid',vKid());break;
-    case 'login':mount('login-'+(S.lmode==='kid'?'kid':'tutor'),vLogin());break;
+    case 'login':mount('login-'+(S.lmode==='kid'?'kid'+(S.lk?'-pick':''):'tutor'),vLogin());break;
     case 'kidpick':mount('kidpick',vKidPick());$('#plist').innerHTML=kidRows();break;
     case 'who':mount('who',vWho());$('#plist').innerHTML=whoRows();break;
     case 'app':
@@ -832,16 +844,33 @@ function authFail(e){if(e&&e.message==='stop')return;setErr(errMsg(e))}
 
 /* ---------- Actions ---------- */
 var A={
- role:function(el){if(el.dataset.v==='tutor'){S.step='tutor';S.tmode='create'}else{S.step='login';S.lmode='kid'}render()},
+ role:function(el){if(el.dataset.v==='tutor'){S.step='tutor';S.tmode='create'}else{S.step='login';S.lmode='kid';S.lk=null;S.lkSel=''}render()},
  back:function(){S.step='welcome';render()},
  tmode:function(el){S.tmode=el.dataset.v;render()},
  login:function(){S.step='login';render()},
- lmode:function(el){S.lmode=el.dataset.v;render()},
+ lmode:function(el){S.lmode=el.dataset.v;S.lk=null;S.lkSel='';render()},
+ kidCode:function(){
+   var code=cleanCode(val('l-code'));
+   if(code.length<4)return setErr('Saisis le code famille.');
+   return lookupKids(code).then(function(r){
+     if(!r)return setErr('Code famille introuvable.');
+     S.lk={code:code,kids:r.kids};S.lkSel=r.kids.length===1?r.kids[0]:'';LS.set('qf-code',code);render();
+   },authFail);
+ },
+ lkPick:function(el){
+   S.lkSel=el.dataset.v;
+   Array.prototype.forEach.call(el.parentElement.querySelectorAll('.pill'),function(b){b.classList.toggle('on',b===el)});
+   var pw=document.getElementById('l-pass');if(pw)pw.focus();
+ },
+ lkReset:function(){S.lk=null;S.lkSel='';render()},
  doLogin:function(){
    var kid=S.lmode==='kid',pass=document.getElementById('l-pass').value,p;
    if(kid){
-     var code=cleanCode(val('l-code')),pseudo=val('l-pseudo');
-     if(code.length<4||!pseudo||!pass)return setErr('Saisis le code famille, ton pseudo et ton mot de passe.');
+     var lk=S.lk;
+     if(!lk)return setErr("Saisis d'abord le code famille.");
+     var code=lk.code,pseudo=lk.kids.length?S.lkSel:val('l-pseudo');
+     if(!pseudo)return setErr('Choisis ton prénom dans la liste.');
+     if(!pass)return setErr('Saisis ton mot de passe.');
      p=kidEmail(code,pseudo).then(function(em){LS.set('qf-code',code);return window.QFB.signIn(em,pass)});
    }else{
      var mail=val('l-email').toLowerCase();
@@ -857,6 +886,16 @@ var A={
  },
  passSheet:function(){
    openSheet('Changer le mot de passe','<form data-submit="setPass"><div class="field"><label for="s-pass">Nouveau mot de passe</label><input id="s-pass" type="password" autocomplete="new-password"><small>6 caractères minimum.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer</button></form>');
+ },
+ mailSheet:function(){
+   openSheet('Changer mon adresse e-mail','<form data-submit="setMail"><p class="muted">Adresse actuelle : <b>'+esc(window.QFB.email())+'</b></p><div class="field"><label for="m-new">Nouvelle adresse e-mail</label><input id="m-new" type="email" autocomplete="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="m-pass">Mot de passe actuel</label><input id="m-pass" type="password" autocomplete="current-password"><small>Par sécurité, on vérifie que c\'est bien toi.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Envoyer le lien de confirmation</button></form>');
+ },
+ setMail:function(){
+   var n=val('m-new').toLowerCase(),pw=document.getElementById('m-pass').value;
+   if(!okMail(n))return setErr('Adresse e-mail invalide.');
+   if(n===String(window.QFB.email()).toLowerCase())return setErr("C'est déjà ton adresse actuelle.");
+   if(!pw)return setErr('Saisis ton mot de passe actuel.');
+   return run(function(){return window.QFB.changeEmail(n,pw)},'Lien envoyé. Ouvre ta nouvelle boîte mail et clique sur le lien pour confirmer.').then(function(ok){if(ok)closeSheet()});
  },
  setPass:function(){
    var pass=document.getElementById('s-pass').value;
@@ -875,7 +914,7 @@ var A={
  close:closeSheet,
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
  menu:function(){
-   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">Me déconnecter</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?'Changer ma photo de profil':'Ajouter ma photo de profil')+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">Changer le code tuteur</button>':'')+'<button class="btn ghost block" data-a="colorSheet">Ma couleur</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">Changer mon mot de passe</button>':'')+'<button class="btn ghost block" data-a="phoneSheet">'+(me().phone?'Modifier mon numéro de téléphone':'Ajouter mon numéro de téléphone')+'</button></div>');
+   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">Me déconnecter</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?'Changer ma photo de profil':'Ajouter ma photo de profil')+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">Changer le code tuteur</button>':'')+'<button class="btn ghost block" data-a="colorSheet">Ma couleur</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">Changer mon mot de passe</button><button class="btn ghost block" data-a="mailSheet">Changer mon adresse e-mail</button>':'')+'<button class="btn ghost block" data-a="phoneSheet">'+(me().phone?'Modifier mon numéro de téléphone':'Ajouter mon numéro de téléphone')+'</button></div>');
  },
  'switch':function(){closeSheet();signOutAll();render()},
  leave:function(){closeSheet();signOutAll();render()},
@@ -888,7 +927,7 @@ var A={
    if(!okTutorCode(pin))return setErr('Le code tuteur doit contenir 8 à 12 lettres ou chiffres.');
    var fid='f'+rid(),code=genCode(),uid=null;S.busy=true;
    function claim(n){
-     return db.doc('codes/'+code).set({fid:fid}).catch(function(e){
+     return db.doc('codes/'+code).set({fid:fid,kids:[]}).catch(function(e){
        if(n>=4)throw e;code=genCode();
        return db.doc('families/'+fid).update({code:code}).then(function(){return claim(n+1)});
      });
@@ -935,6 +974,7 @@ var A={
        return db.doc('families/'+fid+'/people/'+uid).set({role:'mineur',pseudo:pseudo,login:normLogin(pseudo),age:age,hue:S.people.length%6,createdAt:Date.now(),seenAt:Date.now()})
         .then(function(){return db.doc('families/'+fid+'/private/kid_'+uid).set({pw:pass})})
         .then(function(){return db.doc('users/'+uid).set({fid:fid,role:'mineur'})})
+        .then(function(){return db.doc('codes/'+fam().code).update({kids:kids().map(function(k){return k.pseudo}).filter(function(n){return normLogin(n)!==normLogin(pseudo)}).concat([pseudo])})})
         .then(function(){return notify('tuteurs',pseudo+' a rejoint la famille.','info')});
      });
    },pseudo+' ajouté').then(function(ok){if(ok)closeSheet()});
