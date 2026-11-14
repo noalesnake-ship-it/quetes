@@ -409,13 +409,51 @@ var dref=function(n,id){return db.doc('families/'+S.fid+'/'+n+'/'+id)};
 var notify=function(to,text,kind){return col('notifs').add({to:to,text:text,kind:kind||'info',at:Date.now()})};
 var notifyMany=function(ids,text,kind){return Promise.all(ids.map(function(i){return notify(i,text,kind)}))};
 
-function stopFamily(){unsubs.forEach(function(u){try{u()}catch(e){}});unsubs=[];clearTimeout(slowT);stopPrefs();S.prefPid=null;S.fid=null;S.fam=null;S.people=[];S.quests=[];S.wishes=[];S.ledger=[];S.notifs=[];S.messages=[];S.got={};S.slow=false}
+/* ---------- Notifications système (tant que l'app est ouverte ou en arrière-plan) ---------- */
+var NT={prev:{},ready:{}};
+var ntSupported=function(){return 'Notification' in window};
+var ntOn=function(){return ntSupported()&&Notification.permission==='granted'&&LS.get('qf-nt')!=='off'};
+var ntLabel=function(){return ntOn()?'Désactiver les notifications':'Activer les notifications'};
+function ntShow(title,body,tag){
+  if(!ntOn())return;
+  var o={body:body,tag:tag,icon:'icon-192.png',badge:'icon-192.png'};
+  var plain=function(){try{new Notification(title,o)}catch(e){}};
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration().then(function(r){if(r)r.showNotification(title,o);else plain()},plain);
+    }else plain();
+  }catch(e){plain()}
+}
+function ntCheck(key,arr){
+  var ids={};arr.forEach(function(x){ids[x.id]=1});
+  if(!NT.ready[key]){NT.prev[key]=ids;NT.ready[key]=true;return}
+  var old=NT.prev[key]||{};NT.prev[key]=ids;
+  if(!document.hidden||!S.pid||!ntOn())return;
+  var lim=Date.now()-5*60000;
+  var fresh=arr.filter(function(x){return !old[x.id]&&(x.at||0)>lim});
+  if(key==='notifs')fresh=fresh.filter(function(n){return n.to===S.pid||(n.to==='tuteurs'&&isT())});
+  else fresh=fresh.filter(function(x){return x.from!==S.pid});
+  fresh.slice(0,3).forEach(function(x){
+    if(key==='notifs')ntShow('Quêtes de famille',x.text,'n-'+x.id);
+    else ntShow(nameOf(x.from)+' · message',x.text,'m-'+x.id);
+  });
+}
+function ntBadge(){
+  var n=0;
+  if(S.step==='app'&&S.pid){try{n=unread()+unreadChat()}catch(e){n=0}}
+  var t=(n>0?'('+n+') ':'')+'Quêtes de famille';
+  if(document.title!==t)document.title=t;
+  try{if(navigator.setAppBadge){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge()}}catch(e){}
+}
+document.addEventListener('visibilitychange',ntBadge);
+if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+function stopFamily(){if(window.NT){NT.ready={};NT.prev={}}unsubs.forEach(function(u){try{u()}catch(e){}});unsubs=[];clearTimeout(slowT);stopPrefs();S.prefPid=null;S.fid=null;S.fam=null;S.people=[];S.quests=[];S.wishes=[];S.ledger=[];S.notifs=[];S.messages=[];S.got={};S.slow=false}
 function onSubErr(e){if(e&&e.code==='revoked'){S.step='blocked';render();return}S.slow=true;schedule()}
 function startFamily(fid,role){
   if(S.fid===fid&&unsubs.length)return;
   stopFamily();S.fid=fid;var tut=role==='tuteur';
   var fd=db.doc('families/'+fid);
-  function sub(key,q,post){unsubs.push(q.onSnapshot(function(snap){var arr=snap.docs.map(function(d){return Object.assign({},d.data(),{id:d.id})});S[key]=post?post(arr):arr;S.got[key]=true;schedule()},onSubErr))}
+  function sub(key,q,post){unsubs.push(q.onSnapshot(function(snap){var arr=snap.docs.map(function(d){return Object.assign({},d.data(),{id:d.id})});S[key]=post?post(arr):arr;S.got[key]=true;if(key==='notifs'||key==='messages')ntCheck(key,S[key]);ntBadge();schedule()},onSubErr))}
   var byAtDesc=function(n){return function(a){return a.sort(function(x,y){return (y.at||0)-(x.at||0)}).slice(0,n)}};
   unsubs.push(fd.onSnapshot(function(s){S.fam=s.exists?Object.assign({},s.data(),{id:s.id}):null;S.got.fam=true;schedule()},onSubErr));
   sub('people',fd.collection('people'));
@@ -434,7 +472,7 @@ function lookupKids(code){
 }
 function enter(pid,role){S.pid=pid;S.chan='family';S.qf='all';S.enterAt=Date.now();setTimeout(schedule,4200);S.tab=role==='tuteur'?'valider':'quetes';S.step='app';LS.set('qf-fid',S.fid);LS.set('qf-pid',pid);saveSession();closeSheet();render();window.scrollTo(0,0)}
 function saveSession(){return;if(!S.uid||S.readonly||!db)return;try{db.doc('data/users/'+S.uid+'/session').set({fid:S.fid||'',pid:S.pid||''}).catch(function(){})}catch(e){}}
-function signOutAll(){forget();S.step='welcome';try{window.QFB.signOut()}catch(e){}}
+function signOutAll(){forget();S.step='welcome';ntBadge();try{window.QFB.signOut()}catch(e){}}
 function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();LS.del('qf-fid');LS.del('qf-pid');S.pid=null;S.kf=null;saveSession()}
 
 /* ---------- Vues d'accueil ---------- */
@@ -912,9 +950,17 @@ var A={
    return run(function(){return dref('people',m.id).update({phone:c})},v?'Numéro enregistré':'Numéro supprimé').then(function(ok){if(ok)closeSheet()});
  },
  close:closeSheet,
+ ntToggle:function(){
+   if(!ntSupported()){closeSheet();toast("Notifications indisponibles ici. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.",true);return}
+   var st=Notification.permission;
+   if(st==='denied'){closeSheet();toast("Notifications bloquées : autorise-les dans les réglages du navigateur.",true);return}
+   if(st==='granted'){var on=LS.get('qf-nt')!=='off';LS.set('qf-nt',on?'off':'on');closeSheet();toast(on?'Notifications désactivées':'Notifications activées');return}
+   var fired=0,done=function(r){if(fired)return;fired=1;closeSheet();if(r==='granted'){LS.set('qf-nt','on');ntShow('Notifications activées','Tu seras prévenu des nouveautés de ta famille.','nt-test');toast('Notifications activées')}else toast('Notifications refusées.',true)};
+   var pr=Notification.requestPermission(done);if(pr&&pr.then)pr.then(done);
+ },
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
  menu:function(){
-   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">Me déconnecter</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?'Changer ma photo de profil':'Ajouter ma photo de profil')+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">Changer le code tuteur</button>':'')+'<button class="btn ghost block" data-a="colorSheet">Ma couleur</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">Changer mon mot de passe</button><button class="btn ghost block" data-a="mailSheet">Changer mon adresse e-mail</button>':'')+'<button class="btn ghost block" data-a="phoneSheet">'+(me().phone?'Modifier mon numéro de téléphone':'Ajouter mon numéro de téléphone')+'</button></div>');
+   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">Me déconnecter</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?'Changer ma photo de profil':'Ajouter ma photo de profil')+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">Changer le code tuteur</button>':'')+'<button class="btn ghost block" data-a="colorSheet">Ma couleur</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">Changer mon mot de passe</button><button class="btn ghost block" data-a="mailSheet">Changer mon adresse e-mail</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?'Modifier mon numéro de téléphone':'Ajouter mon numéro de téléphone')+'</button></div>');
  },
  'switch':function(){closeSheet();signOutAll();render()},
  leave:function(){closeSheet();signOutAll();render()},
