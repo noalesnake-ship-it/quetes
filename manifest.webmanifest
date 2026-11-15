@@ -1,6 +1,6 @@
 {
-  "name": "Quêtes de famille",
-  "short_name": "Quêtes",
+  "name": "FamilyQuest",
+  "short_name": "FamilyQuest",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
