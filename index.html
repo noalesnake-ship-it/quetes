@@ -135,6 +135,11 @@ progress::-moz-progress-bar{background:var(--coin);border-radius:5px}
 .lst li{display:flex;gap:10px;align-items:center;padding:10px 12px;background:var(--surface-2);border-radius:12px}
 .lst li.new{background:var(--accent-soft)}
 .lst small{color:var(--ink-2);display:block}
+.nt-bar{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.nt-bar .muted{flex:1;font-size:13px;margin:0}
+.nt-bar .btn{white-space:nowrap}
+.nt-row{display:flex;gap:10px;align-items:center;flex:1;min-width:0;cursor:pointer}
+.nt-sel,#nt-all{width:20px;height:20px;flex:none;accent-color:var(--accent,#2848E8)}
 .lst .delta{font:800 18px var(--f-display);font-variant-numeric:tabular-nums}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
 
@@ -322,7 +327,8 @@ window.QFB = {
   email: () => (auth.currentUser && auth.currentUser.email) || '',
   changeEmail: async (n, p) => { const u = auth.currentUser; await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, p)); await verifyBeforeUpdateEmail(u, n); },
   signOut: () => signOut(auth),
-  dropCurrent: () => deleteUser(auth.currentUser)
+  dropCurrent: () => deleteUser(auth.currentUser),
+  idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(''))
 };
 window.dispatchEvent(new Event("qfb-ready"));
 </script>
@@ -406,14 +412,61 @@ function run(fn,ok){
 /* ---------- Base de données ---------- */
 var col=function(n){return db.collection('families/'+S.fid+'/'+n)};
 var dref=function(n,id){return db.doc('families/'+S.fid+'/'+n+'/'+id)};
-var notify=function(to,text,kind){return col('notifs').add({to:to,text:text,kind:kind||'info',at:Date.now()})};
-var notifyMany=function(ids,text,kind){return Promise.all(ids.map(function(i){return notify(i,text,kind)}))};
+var notifyRaw=function(to,text,kind){return col('notifs').add({to:to,text:text,kind:kind||'info',at:Date.now()})};
+var notify=function(to,text,kind){return notifyRaw(to,text,kind).then(function(r){pushSend([{to:to,tag:'n-'+(r&&r.id)}],'FamilyQuest',text);return r})};
+var notifyMany=function(ids,text,kind){return Promise.all(ids.map(function(i){return notifyRaw(i,text,kind)})).then(function(rs){pushSend(ids.map(function(i,k){return {to:i,tag:'n-'+(rs[k]&&rs[k].id)}}),'FamilyQuest',text);return rs})};
 
 /* ---------- Notifications système (tant que l'app est ouverte ou en arrière-plan) ---------- */
 var NT={prev:{},ready:{}};
 var ntSupported=function(){return 'Notification' in window};
 var ntOn=function(){return ntSupported()&&Notification.permission==='granted'&&LS.get('qf-nt')!=='off'};
 var ntLabel=function(){return ntOn()?'Désactiver les notifications':'Activer les notifications'};
+
+/* ---------- Notifications push (téléphone fermé) via le relais Cloudflare ----------
+   À REMPLIR après avoir déployé le Worker (voir GUIDE.md) :
+     url : adresse du Worker, ex. 'https://familyquest-push.TON-COMPTE.workers.dev'
+     key : clé publique VAPID (la longue chaîne qui commence souvent par 'B')
+   Tant que ces deux champs sont vides, rien ne change dans l'app. */
+var PUSH={url:'https://familyquest-push.noa-lesnake.workers.dev',key:'BBdslH_eY4ov9W-cxImZsah3gB6KvxKDhfTw7BhjXMv7RU3AS5QkguAU00sTpkOf3b9_oHlXzfepKEmfa9x3qzs'};
+var pushOn=function(){return !!(PUSH.url&&PUSH.key&&'serviceWorker' in navigator&&'PushManager' in window)};
+var pushKey=function(x){x=x.replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';var b=atob(x),o=new Uint8Array(b.length);for(var i=0;i<b.length;i++)o[i]=b.charCodeAt(i);return o};
+function pushCall(path,body,tokenP){
+  if(!window.QFB||!window.QFB.idToken)return Promise.reject(new Error('auth'));
+  return (tokenP||window.QFB.idToken()).then(function(t){
+    if(!t)throw new Error('token');
+    return fetch(PUSH.url.replace(/\/$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify(body)});
+  });
+}
+/* Abonne cet appareil (au plus une fois toutes les 12 h, sauf force). */
+function pushSync(force){
+  if(!pushOn()||!ntOn()||!S.uid||S.readonly)return Promise.resolve();
+  if(!force&&Date.now()-(parseInt(LS.get('qf-ps')||'0',10)||0)<432e5)return Promise.resolve();
+  return navigator.serviceWorker.ready.then(function(reg){
+    return reg.pushManager.getSubscription().then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey(PUSH.key)})});
+  }).then(function(sub){return pushCall('/subscribe',{subscription:sub.toJSON()})}).then(function(r){if(r&&r.ok)LS.set('qf-ps',String(Date.now()))}).catch(function(){});
+}
+/* Retire cet appareil du relais (notifications coupées ou déconnexion). */
+function pushOff(){
+  if(!pushOn()||!window.QFB||!window.QFB.idToken)return Promise.resolve();
+  LS.del('qf-ps');
+  var tokenP=window.QFB.idToken(); /* capturé tout de suite, avant une éventuelle déconnexion */
+  return navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription()}).then(function(sub){
+    if(!sub)return;
+    return pushCall('/unsubscribe',{endpoint:sub.endpoint},tokenP);
+  }).catch(function(){});
+}
+/* items : [{to:identifiant|'tuteurs', tag:'n-…'}] */
+function pushSend(items,title,body){
+  if(!PUSH.url||!items||!items.length||S.readonly)return;
+  pushCall('/notify',{items:items,title:title,body:body}).catch(function(){});
+}
+function pushMsg(chan,id,text){
+  if(!PUSH.url)return;
+  var ids=chan==='family'?S.people.map(function(p){return p.id}):[chan].concat(tutors().map(function(t){return t.id}));
+  var seen={},items=[];
+  ids.forEach(function(i){if(i&&i!==S.pid&&!seen[i]){seen[i]=1;items.push({to:i,tag:'m-'+id})}});
+  pushSend(items,nameOf(S.pid)+' · message',String(text).slice(0,200));
+}
 function ntShow(title,body,tag){
   if(!ntOn())return;
   var o={body:body,tag:tag,icon:'icon-192.png',badge:'icon-192.png'};
@@ -470,9 +523,9 @@ function lookup(code){
 function lookupKids(code){
   return db.doc('codes/'+code).get().then(function(s){return s.exists?{fid:s.data().fid,kids:Array.isArray(s.data().kids)?s.data().kids:[]}:null});
 }
-function enter(pid,role){S.pid=pid;S.chan='family';S.qf='all';S.enterAt=Date.now();setTimeout(schedule,4200);S.tab=role==='tuteur'?'valider':'quetes';S.step='app';LS.set('qf-fid',S.fid);LS.set('qf-pid',pid);saveSession();closeSheet();render();window.scrollTo(0,0)}
+function enter(pid,role){S.pid=pid;S.chan='family';S.qf='all';S.enterAt=Date.now();setTimeout(schedule,4200);S.tab=role==='tuteur'?'valider':'quetes';S.step='app';LS.set('qf-fid',S.fid);LS.set('qf-pid',pid);saveSession();closeSheet();render();window.scrollTo(0,0);pushSync(false)}
 function saveSession(){return;if(!S.uid||S.readonly||!db)return;try{db.doc('data/users/'+S.uid+'/session').set({fid:S.fid||'',pid:S.pid||''}).catch(function(){})}catch(e){}}
-function signOutAll(){forget();S.step='welcome';ntBadge();try{window.QFB.signOut()}catch(e){}}
+function signOutAll(){pushOff();forget();S.step='welcome';ntBadge();try{window.QFB.signOut()}catch(e){}}
 function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();LS.del('qf-fid');LS.del('qf-pid');S.pid=null;S.kf=null;saveSession()}
 
 /* ---------- Vues d'accueil ---------- */
@@ -689,7 +742,7 @@ function renderInner(){
   if(S.step==='resolve'){
     if(S.got.fam&&S.got.people){
       if(!S.fam){signOutAll()}
-      else{var p=P(S.pid);if(p){S.tab=p.role==='tuteur'?'valider':'quetes';S.step='app'}else{signOutAll()}}
+      else{var p=P(S.pid);if(p){S.tab=p.role==='tuteur'?'valider':'quetes';S.step='app';setTimeout(function(){pushSync(false)},0)}else{signOutAll()}}
     }
   }
   if(S.step==='app'&&S.got.people&&!me()&&Date.now()-(S.enterAt||0)>4000){signOutAll()}
@@ -954,8 +1007,8 @@ var A={
    if(!ntSupported()){closeSheet();toast("Notifications indisponibles ici. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.",true);return}
    var st=Notification.permission;
    if(st==='denied'){closeSheet();toast("Notifications bloquées : autorise-les dans les réglages du navigateur.",true);return}
-   if(st==='granted'){var on=LS.get('qf-nt')!=='off';LS.set('qf-nt',on?'off':'on');closeSheet();toast(on?'Notifications désactivées':'Notifications activées');return}
-   var fired=0,done=function(r){if(fired)return;fired=1;closeSheet();if(r==='granted'){LS.set('qf-nt','on');ntShow('Notifications activées','Tu seras prévenu des nouveautés de ta famille.','nt-test');toast('Notifications activées')}else toast('Notifications refusées.',true)};
+   if(st==='granted'){var on=LS.get('qf-nt')!=='off';LS.set('qf-nt',on?'off':'on');closeSheet();if(on)pushOff();else pushSync(true);toast(on?'Notifications désactivées':'Notifications activées');return}
+   var fired=0,done=function(r){if(fired)return;fired=1;closeSheet();if(r==='granted'){LS.set('qf-nt','on');pushSync(true);ntShow('Notifications activées','Tu seras prévenu des nouveautés de ta famille.','nt-test');toast('Notifications activées')}else toast('Notifications refusées.',true)};
    var pr=Notification.requestPermission(done);if(pr&&pr.then)pr.then(done);
  },
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
@@ -1211,7 +1264,9 @@ var A={
    var inp=document.getElementById('chat-in'),text=inp?inp.value.trim():'';
    if(!text)return;
    inp.value='';S.stick=true;
-   return run(function(){return col('messages').add({ch:S.chan,from:S.pid,text:text.slice(0,500),at:Date.now()})}).then(function(ok){
+   var chan=S.chan,sent=null;
+   return run(function(){return col('messages').add({ch:S.chan,from:S.pid,text:text.slice(0,500),at:Date.now()}).then(function(r){sent=r})}).then(function(ok){
+     if(ok&&sent)pushMsg(chan,sent.id,text);
      if(!ok){var j=document.getElementById('chat-in');if(j&&!j.value)j.value=text}
    });
  },
@@ -1421,10 +1476,34 @@ var A={
  /* Notifications */
  notifs:function(){
    var list=myNotifs(),m=me(),seen=(m&&m.seenAt)||0;
-   openSheet('Notifications',list.length?'<ul class="lst">'+list.slice(0,40).map(function(n){return '<li class="'+(n.at>seen?'new':'')+'"><div class="grow"><span>'+esc(n.text)+'</span><small>'+ago(n.at)+'</small></div></li>'}).join('')+'</ul>':'<p class="muted">Rien pour l\'instant. Les messages apparaissent ici quand quelque chose change dans la famille.</p><p class="muted" style="margin-top:10px">Ces notifications s\'affichent dans l\'app. Il n\'y a pas d\'alerte sur le téléphone quand l\'app est fermée.</p>');
+   var bar='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="nt-all"> Tout</label><span class="muted" id="nt-count"></span><button class="btn ghost sm" id="nt-del" data-a="ntDel" disabled>'+ic('trash')+' Supprimer</button></div>';
+   openSheet('Notifications',list.length?bar+'<ul class="lst" id="nt-list">'+list.slice(0,40).map(function(n){return '<li class="'+(n.at>seen?'new':'')+'"><label class="nt-row"><input type="checkbox" class="nt-sel" data-id="'+esc(n.id)+'" aria-label="Sélectionner cette notification"><div class="grow"><span>'+esc(n.text)+'</span><small>'+ago(n.at)+'</small></div></label></li>'}).join('')+'</ul>':'<p class="muted">Rien pour l\'instant. Les messages apparaissent ici quand quelque chose change dans la famille.</p><p class="muted" style="margin-top:10px">'+(pushOn()?'Pour être prévenu sur le téléphone même quand l\'app est fermée, active les notifications dans ton profil.':'Ces notifications s\'affichent dans l\'app. Il n\'y a pas d\'alerte sur le téléphone quand l\'app est fermée.')+'</p>');
    if(unread()>0&&!S.readonly)dref('people',S.pid).update({seenAt:Date.now()}).catch(function(){});
+ },
+ ntDel:function(el){
+   var ids=ntSelected();
+   if(!ids.length)return;
+   if(arm(el))return;
+   var mine={};myNotifs().forEach(function(n){mine[n.id]=1});
+   ids=ids.filter(function(i){return mine[i]});
+   if(!ids.length)return;
+   return run(function(){var b=db.batch();ids.forEach(function(i){b.delete(dref('notifs',i))});return b.commit()},ids.length>1?ids.length+' notifications supprimées':'Notification supprimée').then(function(done){
+     if(!done)return;
+     ids.forEach(function(i){var c=document.querySelector('.nt-sel[data-id="'+i+'"]'),li=c&&c.closest('li');if(li)li.remove()});
+     ntSelUpdate();
+     var ul=document.getElementById('nt-list');
+     if(ul&&!ul.children.length)closeSheet();
+   });
  }
 };
+function ntSelected(){return Array.prototype.map.call(document.querySelectorAll('.nt-sel:checked'),function(c){return c.dataset.id})}
+function ntSelUpdate(){
+  var all=document.querySelectorAll('.nt-sel'),n=ntSelected().length;
+  var c=document.getElementById('nt-count'),d=document.getElementById('nt-del'),a=document.getElementById('nt-all');
+  if(c)c.textContent=n?n+(n>1?' sélectionnées':' sélectionnée'):'';
+  if(d)d.disabled=!n;
+  if(a)a.checked=n>0&&n===all.length;
+}
 function arm(el){
   if(el.dataset.armed)return false;
   el.dataset.armed='1';var old=el.innerHTML;el.innerHTML='Confirmer ?';el.classList.add('bad');
@@ -1463,6 +1542,8 @@ document.addEventListener('change',function(e){
   else if(t.id==='bg-veil'){bgVeil(parseInt(t.value,10),true)}
   else if(t.id==='bg-file'&&t.files&&t.files[0]){bgFile(t.files[0]);t.value=''}
   else if(t.id==='av-file'&&t.files&&t.files[0]){avFile(t.files[0]);t.value=''}
+  else if(t.id==='nt-all'){Array.prototype.forEach.call(document.querySelectorAll('.nt-sel'),function(c){c.checked=t.checked});ntSelUpdate()}
+  else if(t.classList&&t.classList.contains('nt-sel')){ntSelUpdate()}
 });
 document.addEventListener('input',function(e){
   var t=e.target;if(!t||t.id!=='bg-veil')return;
