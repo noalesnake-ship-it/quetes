@@ -139,7 +139,7 @@ progress::-moz-progress-bar{background:var(--coin);border-radius:5px}
 .nt-bar .muted{flex:1;font-size:13px;margin:0}
 .nt-bar .btn{white-space:nowrap}
 .nt-row{display:flex;gap:10px;align-items:center;flex:1;min-width:0;cursor:pointer}
-.nt-sel,#nt-all{width:20px;height:20px;flex:none;accent-color:var(--accent,#2848E8)}
+.nt-sel,#nt-all,.hl-sel,#hl-all{width:20px;height:20px;flex:none;accent-color:var(--accent,#2848E8)}
 .lst .delta{font:800 18px var(--f-display);font-variant-numeric:tabular-nums}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
 
@@ -666,14 +666,42 @@ function vRecK(){
   if(!cat.length&&!req.length&&!ex.length)h+=empty('Rien pour le moment',"Dis ce qui te ferait plaisir. Le tuteur choisira combien de points il faut.");
   return h;
 }
+/* ---------- Historique des points : masquer des lignes (affichage seulement) ----------
+   Le solde, les séries, les badges, le bilan et l'objectif familial sont calculés à partir de
+   TOUTES les lignes du registre. On ne supprime donc rien : on masque seulement, pour ce profil,
+   sur cet appareil. Les points ne changent jamais. */
+var HL={rows:[],sel:{}};
+var hlKey=function(){return 'qf-hid-'+S.fid+'-'+S.pid};
+var hidGet=function(){var o={};try{JSON.parse(LS.get(hlKey())||'[]').forEach(function(i){o[i]=1})}catch(e){}return o};
+var hidSave=function(o){var a=Object.keys(o);if(a.length>1000)a=a.slice(a.length-1000);LS.set(hlKey(),JSON.stringify(a))};
+var histKid=function(l){return '<div class="grow"><b>'+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
+var histJournal=function(l){return av(P(l.kid),'s')+'<div class="grow"><b>'+esc(nameOf(l.kid))+' · '+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+(l.by&&P(l.by)?' · par '+esc(nameOf(l.by)):'')+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
+function histBlock(rows,limit,empty,inner){
+  var hid=hidGet(),vis=rows.filter(function(l){return !hid[l.id]}),nHid=rows.length-vis.length;
+  HL.rows=vis.map(function(l){return l.id});
+  var keep={};HL.rows.forEach(function(i){if(HL.sel[i])keep[i]=1});HL.sel=keep;
+  var shown=vis.slice(0,limit),n=Object.keys(HL.sel).length,h='';
+  if(shown.length){
+    h+='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="hl-all"'+(n&&n===shown.length?' checked':'')+'> Tout</label><span class="muted" id="hl-count">'+(n?n+(n>1?' sélectionnées':' sélectionnée'):'')+'</span><button class="btn ghost sm" id="hl-hide" data-a="hlHide"'+(n?'':' disabled')+'>Masquer</button></div>';
+    h+='<ul class="lst">'+shown.map(function(l){return '<li><input type="checkbox" class="hl-sel" data-id="'+esc(l.id)+'" aria-label="Sélectionner cette ligne"'+(HL.sel[l.id]?' checked':'')+'>'+inner(l)+'</li>'}).join('')+'</ul>';
+    h+='<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="hlHideAll">Tout masquer</button></div>';
+  }else h+=rows.length?'<p class="muted">Tout l\'historique est masqué.</p>':empty;
+  if(nHid)h+='<p class="muted" style="margin-top:8px">'+nHid+' ligne'+(nHid>1?'s':'')+' masquée'+(nHid>1?'s':'')+' sur cet appareil. Les points ne changent pas. <button class="btn ghost sm" data-a="hlShow">Tout réafficher</button></p>';
+  return h;
+}
+function hlUpdate(){
+  var n=Object.keys(HL.sel).length,all=document.querySelectorAll('.hl-sel').length;
+  var c=document.getElementById('hl-count'),d=document.getElementById('hl-hide'),a=document.getElementById('hl-all');
+  if(c)c.textContent=n?n+(n>1?' sélectionnées':' sélectionnée'):'';
+  if(d)d.disabled=!n;
+  if(a)a.checked=n>0&&n===all;
+}
 function vPoints(){
   var m=me(),b=bal(m.id);
   var goals=S.wishes.filter(function(w){return w.status==='accepte'&&(w.for===m.id||w.for==='all')&&w.cost>b}).sort(function(a,c){return a.cost-c.cost});
   var h='<div class="hero"><span class="coin big">'+ic('star')+'</span><div><small>Mes points</small><div class="n">'+b+'</div></div></div>';
   if(goals[0])h+='<div class="card" style="margin-top:12px"><span class="lbl">Prochain objectif</span><b>'+esc(goals[0].title)+'</b><progress max="'+goals[0].cost+'" value="'+b+'" aria-label="Progression"></progress><p class="muted">Plus que '+plural(goals[0].cost-b)+'.</p></div>';
-  var hist=S.ledger.filter(function(l){return l.kid===m.id}).slice(0,30);
-  h+=sec('Historique');
-  h+=hist.length?'<ul class="lst">'+hist.map(function(l){return '<li><div class="grow"><b>'+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span></li>'}).join('')+'</ul>':'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>';
+  h+=sec('Historique')+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>',histKid);
   return h;
 }
 
@@ -696,9 +724,7 @@ function vPoints2(){
   h+='<div class="card"><span class="lbl">Série</span><p>'+(st.cur>0?'<b>'+st.cur+' jour'+(st.cur>1?'s':'')+' de suite</b> avec au moins une quête validée.':'Valide une quête aujourd\'hui pour lancer une série.')+'</p><p class="muted">Record : '+st.best+' jour'+(st.best>1?'s':'')+'.</p></div>';
   if(g)h+='<div class="card"><span class="lbl">'+(goalW?'Mon objectif':'Prochain objectif')+'</span><b>'+esc(g.title)+'</b><progress max="'+g.cost+'" value="'+Math.min(b,g.cost)+'" aria-label="Progression"></progress><p class="muted">'+(b>=g.cost?'Tu as assez de points. Va dans Récompenses pour l\'échanger.':'Plus que '+plural(g.cost-b)+'.')+'</p></div>';
   h+=chart7(m.id)+boardCard(m)+sec('Badges')+'<div class="badges">'+badgesOf(m.id).map(function(x){return '<div class="bdg'+(x[2]?' on':'')+'"><b>'+esc(x[0])+'</b><small>'+(x[2]?'Obtenu':esc(x[1]))+'</small></div>'}).join('')+'</div>';
-  var hist=S.ledger.filter(function(l){return l.kid===m.id}).slice(0,30);
-  h+=sec('Historique');
-  h+=hist.length?'<ul class="lst">'+hist.map(function(l){return '<li><div class="grow"><b>'+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span></li>'}).join('')+'</ul>':'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>';
+  h+=sec('Historique')+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>',histKid);
   return h;
 }
 function vFamilleX(){
@@ -708,8 +734,7 @@ function vFamilleX(){
   h+=ks.length?'<div class="card">'+ws.map(function(x){var lv=levelOf(earned(x.kid.id));return '<div class="bil"><div class="bil-h">'+av(x.kid,'s')+'<b>'+esc(x.kid.pseudo)+'</b><span class="muted">Niveau '+(lv.i+1)+' · '+esc(lv.name)+'</span></div><div class="bar"><span style="width:'+Math.round(x.pts/mx*100)+'%"></span></div><small class="muted">'+x.pts+' pts gagnés · '+x.n+' quête'+(x.n>1?'s':'')+' validée'+(x.n>1?'s':'')+'</small></div>'}).join('')+'</div>':'<p class="muted">Ajoute un mineur pour voir son bilan.</p>';
   h+=sec('Réglages')+'<form class="card" data-submit="setRate"><label class="lbl" for="rate">Valeur d\'un point en euros (facultatif)</label><input id="rate" type="text" inputmode="decimal" value="'+(f.rate>0?String(f.rate).replace('.',','):'')+'" placeholder="0,10"><small class="muted">Affiche un équivalent en euros dans l\'onglet Points du mineur. Laisse vide pour ne rien afficher.</small><button class="btn ghost" type="submit">Enregistrer</button></form>';
   h+=settingsX(f);
-  var led=S.ledger.slice(0,25);
-  h+=sec('Journal des points')+(led.length?'<ul class="lst">'+led.map(function(l){return '<li>'+av(P(l.kid),'s')+'<div class="grow"><b>'+esc(nameOf(l.kid))+' · '+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+(l.by&&P(l.by)?' · par '+esc(nameOf(l.by)):'')+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span></li>'}).join('')+'</ul>':'<p class="muted">Aucun mouvement de points pour le moment.</p>');
+  h+=sec('Journal des points')+histBlock(S.ledger,25,'<p class="muted">Aucun mouvement de points pour le moment.</p>',histJournal);
   return h;
 }
 var TABS_T=[['valider','À valider','check'],['quetes','Quêtes','flag'],['recompenses','Récompenses','gift'],['chat','Chat','chat'],['famille','Famille','users']];
@@ -1494,7 +1519,19 @@ var A={
      var ul=document.getElementById('nt-list');
      if(ul&&!ul.children.length)closeSheet();
    });
- }
+ },
+ hlHide:function(){
+   var ids=Object.keys(HL.sel);if(!ids.length)return;
+   var o=hidGet();ids.forEach(function(i){o[i]=1});hidSave(o);HL.sel={};
+   toast(ids.length>1?ids.length+' lignes masquées':'Ligne masquée');render();
+ },
+ hlHideAll:function(el){
+   if(!HL.rows.length)return;
+   if(arm(el))return;
+   var o=hidGet();HL.rows.forEach(function(i){o[i]=1});hidSave(o);HL.sel={};
+   toast('Historique masqué');render();
+ },
+ hlShow:function(){LS.del(hlKey());HL.sel={};toast('Lignes réaffichées');render()}
 };
 function ntSelected(){return Array.prototype.map.call(document.querySelectorAll('.nt-sel:checked'),function(c){return c.dataset.id})}
 function ntSelUpdate(){
@@ -1544,6 +1581,8 @@ document.addEventListener('change',function(e){
   else if(t.id==='av-file'&&t.files&&t.files[0]){avFile(t.files[0]);t.value=''}
   else if(t.id==='nt-all'){Array.prototype.forEach.call(document.querySelectorAll('.nt-sel'),function(c){c.checked=t.checked});ntSelUpdate()}
   else if(t.classList&&t.classList.contains('nt-sel')){ntSelUpdate()}
+  else if(t.id==='hl-all'){HL.sel={};Array.prototype.forEach.call(document.querySelectorAll('.hl-sel'),function(c){c.checked=t.checked;if(t.checked)HL.sel[c.dataset.id]=1});hlUpdate()}
+  else if(t.classList&&t.classList.contains('hl-sel')){if(t.checked)HL.sel[t.dataset.id]=1;else delete HL.sel[t.dataset.id];hlUpdate()}
 });
 document.addEventListener('input',function(e){
   var t=e.target;if(!t||t.id!=='bg-veil')return;
