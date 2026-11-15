@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2848E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Quêtes">
+<meta name="apple-mobile-web-app-title" content="FamilyQuest">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap">
-<title>Quêtes de famille</title>
+<title>FamilyQuest</title>
 <style>[hidden]{display:none!important}html{-webkit-text-size-adjust:100%}body{margin:0}</style>
 <style>
 /* Concept : un carnet de quêtes en colonne mobile. Chaque quête est un billet dont le talon doré porte la valeur en points. Une barre d'onglets basse change d'espace selon le rôle (tuteur ou mineur). */
@@ -434,14 +434,14 @@ function ntCheck(key,arr){
   if(key==='notifs')fresh=fresh.filter(function(n){return n.to===S.pid||(n.to==='tuteurs'&&isT())});
   else fresh=fresh.filter(function(x){return x.from!==S.pid});
   fresh.slice(0,3).forEach(function(x){
-    if(key==='notifs')ntShow('Quêtes de famille',x.text,'n-'+x.id);
+    if(key==='notifs')ntShow('FamilyQuest',x.text,'n-'+x.id);
     else ntShow(nameOf(x.from)+' · message',x.text,'m-'+x.id);
   });
 }
 function ntBadge(){
   var n=0;
   if(S.step==='app'&&S.pid){try{n=unread()+unreadChat()}catch(e){n=0}}
-  var t=(n>0?'('+n+') ':'')+'Quêtes de famille';
+  var t=(n>0?'('+n+') ':'')+'FamilyQuest';
   if(document.title!==t)document.title=t;
   try{if(navigator.setAppBadge){if(n>0)navigator.setAppBadge(n);else navigator.clearAppBadge()}}catch(e){}
 }
@@ -478,7 +478,7 @@ function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();L
 /* ---------- Vues d'accueil ---------- */
 var vLoading=function(){return '<div class="center"><span class="coin big spin">'+ic('star')+'</span><p class="muted">'+(S.slow?'La base de données ne répond pas encore.':'Ouverture du carnet…')+'</p>'+(S.slow&&S.fid?'<button class="link" data-a="leave">Quitter cette famille sur cet appareil</button>':'')+'</div>'};
 var vBlocked=function(){return '<div class="center"><h1>Service indisponible</h1><p class="muted">Impossible de joindre le service. Vérifie ta connexion Internet, puis recharge la page.</p></div>'};
-var vWelcome=function(){return '<section class="auth"><div class="brand"><span class="coin big">'+ic('star')+'</span><h1>Quêtes de famille</h1><p class="lead">Les tâches de la maison deviennent des quêtes. Chaque quête validée par un tuteur rapporte des points, à échanger contre des récompenses.</p></div>'+
+var vWelcome=function(){return '<section class="auth"><div class="brand"><span class="coin big">'+ic('star')+'</span><h1>FamilyQuest</h1><p class="lead">Les tâches de la maison deviennent des quêtes. Chaque quête validée par un tuteur rapporte des points, à échanger contre des récompenses.</p></div>'+
  '<button class="role t" data-a="role" data-v="tutor"><b>Je suis tuteur</b><span>Je crée la famille et les quêtes, et je valide le travail.</span></button>'+
  '<button class="role k" data-a="role" data-v="kid"><b>Je suis mineur</b><span>Un tuteur a créé mon profil. Je me connecte avec le code famille.</span></button><button class="link" data-a="login">Déjà inscrit ? Me connecter</button></section>'};
 function vTutor(){
