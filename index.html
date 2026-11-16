@@ -265,6 +265,8 @@ input[type=file]{width:100%}
 <div id="toast" class="toast" role="status" hidden></div>
 <div id="bgfx" hidden></div>
 
+<script src="i18n-fr.js"></script>
+<script src="i18n-en.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
@@ -340,14 +342,23 @@ window.dispatchEvent(new Event("qfb-ready"));
 var $=function(s,r){return (r||document).querySelector(s)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
 var LS={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}},del:function(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+/* ---------- Langue : les textes sont dans i18n-fr.js et i18n-en.js ---------- */
+var DICT=window.I18N||{};
+var LANG=(function(){var s=LS.get('qf-lang');if(s==='fr'||s==='en')return s;var n=(navigator.languages&&navigator.languages[0])||navigator.language||'fr';return /^en/i.test(n)?'en':'fr'})();
+var LOC=LANG==='en'?'en-GB':'fr-FR';
+try{document.documentElement.lang=LANG}catch(e){}
+function tx(k,p){var s=DICT[LANG]&&DICT[LANG][k];if(s==null)s=DICT.fr&&DICT.fr[k];if(s==null)return k;return p?s.replace(/\{(\w+)\}/g,function(m,n){return p[n]==null?'':p[n]}):s}
+function tn(k,n,p){p=p||{};p.n=n;var one=LANG==='fr'?Math.abs(n)<2:Math.abs(n)===1;return tx(k+(one?'.one':'.other'),p)}
+var dec=function(x){var s=String(x);return LANG==='fr'?s.replace('.',','):s};
 function bytes(n){var a=new Uint8Array(n);try{crypto.getRandomValues(a)}catch(e){for(var i=0;i<n;i++)a[i]=Math.floor(Math.random()*256)}return a}
 var rid=function(){return Array.prototype.map.call(bytes(6),function(b){return ('0'+b.toString(36)).slice(-2)}).join('')};
 var ALPHA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 var genCode=function(){return Array.prototype.map.call(bytes(6),function(b){return ALPHA[b%ALPHA.length]}).join('')};
 var cleanCode=function(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')};
 var fmtCode=function(c){return c.length===6?c.slice(0,3)+' '+c.slice(3):c};
-var plural=function(n){return n+' pt'+(Math.abs(n)>1?'s':'')};
-function ago(ts){var m=Math.round((Date.now()-ts)/60000);if(m<1)return "à l'instant";if(m<60)return 'il y a '+m+' min';var h=Math.round(m/60);if(h<24)return 'il y a '+h+' h';var j=Math.round(h/24);if(j<7)return 'il y a '+j+' j';return new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+var plural=function(n){return tn('pts',n)};
+function ago(ts){var m=Math.round((Date.now()-ts)/60000);if(m<1)return tx('ago.now');if(m<60)return tx('ago.min',{n:m});var h=Math.round(m/60);if(h<24)return tx('ago.h',{n:h});var j=Math.round(h/24);if(j<7)return tx('ago.d',{n:j});return new Date(ts).toLocaleDateString(LOC,{day:'numeric',month:'short'})}
 var val=function(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''};
 
 var ICONS={
@@ -394,18 +405,18 @@ var fam=function(){return S.fam||{}};
 function toast(msg,bad){var t=$('#toast');t.textContent=msg;t.className='toast'+(bad?' bad':'');t.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){t.hidden=true},3400)}
 function setErr(msg){var sh=$('#sheet');var e=(!sh.hidden&&$('.err',sh))||$('#app .err');if(e)e.textContent=msg;else toast(msg,true)}
 function errMsg(e){var c=e&&e.code;
-  if(c==='permission-denied'||c==='invalid_argument')return "Action refusée : ton profil n'a pas le droit de faire ça.";
-  if(c==='auth/email-already-in-use')return "Cet identifiant est déjà utilisé. Choisis-en un autre.";
-  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-login-credentials')return "Identifiants incorrects.";
-  if(c==='auth/weak-password')return "Mot de passe trop faible : 6 caractères minimum.";
-  if(c==='auth/invalid-email')return "Adresse e-mail invalide.";
-  if(c==='auth/too-many-requests')return "Trop d'essais. Patiente quelques minutes avant de réessayer.";
-  if(c==='auth/requires-recent-login')return "Pour des raisons de sécurité, déconnecte-toi, reconnecte-toi, puis réessaie.";
-  if(c==='auth/network-request-failed'||c==='unavailable')return "Pas de connexion Internet. Réessaie.";
-  if(c==='auth/operation-not-allowed')return "La connexion par e-mail n'est pas activée dans Firebase (Authentication).";
-  if(c&&String(c).indexOf('auth/')===0)return "Connexion impossible ("+c.slice(5)+").";if(c==='quota_exceeded'||c==='resource-exhausted')return "Quota du service atteint. Réessaie plus tard.";if(c==='resource_exhausted')return "Trop d'actions d'un coup. Réessaie dans un instant.";if(c==='revoked')return "L'accès a changé. Recharge la page.";return "Connexion impossible pour l'instant. Réessaie."}
+  if(c==='permission-denied'||c==='invalid_argument')return tx('err.denied');
+  if(c==='auth/email-already-in-use')return tx('err.inuse');
+  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-login-credentials')return tx('err.creds');
+  if(c==='auth/weak-password')return tx('err.weak');
+  if(c==='auth/invalid-email')return tx('err.email');
+  if(c==='auth/too-many-requests')return tx('err.toomany');
+  if(c==='auth/requires-recent-login')return tx('err.recent');
+  if(c==='auth/network-request-failed'||c==='unavailable')return tx('err.offline');
+  if(c==='auth/operation-not-allowed')return tx('err.noemail');
+  if(c&&String(c).indexOf('auth/')===0)return tx('err.authfail',{c:c.slice(5)});if(c==='quota_exceeded'||c==='resource-exhausted')return tx('err.quota');if(c==='resource_exhausted')return tx('err.burst');if(c==='revoked')return tx('err.revoked');return tx('err.generic')}
 function run(fn,ok){
-  if(S.readonly){toast("Lecture seule : ton accès ne permet pas d'enregistrer.",true);return Promise.resolve(false)}
+  if(S.readonly){toast(tx('readonly.toast'),true);return Promise.resolve(false)}
   return Promise.resolve().then(fn).then(function(){if(ok)toast(ok);return true},function(e){if(!(e&&e.message==='stop'))toast(errMsg(e),true);return false});
 }
 
@@ -420,7 +431,7 @@ var notifyMany=function(ids,text,kind){return Promise.all(ids.map(function(i){re
 var NT={prev:{},ready:{}};
 var ntSupported=function(){return 'Notification' in window};
 var ntOn=function(){return ntSupported()&&Notification.permission==='granted'&&LS.get('qf-nt')!=='off'};
-var ntLabel=function(){return ntOn()?'Désactiver les notifications':'Activer les notifications'};
+var ntLabel=function(){return ntOn()?tx('nt.disable'):tx('nt.enable')};
 
 /* ---------- Notifications push (téléphone fermé) via le relais Cloudflare ----------
    À REMPLIR après avoir déployé le Worker (voir GUIDE.md) :
@@ -465,7 +476,7 @@ function pushMsg(chan,id,text){
   var ids=chan==='family'?S.people.map(function(p){return p.id}):[chan].concat(tutors().map(function(t){return t.id}));
   var seen={},items=[];
   ids.forEach(function(i){if(i&&i!==S.pid&&!seen[i]){seen[i]=1;items.push({to:i,tag:'m-'+id})}});
-  pushSend(items,nameOf(S.pid)+' · message',String(text).slice(0,200));
+  pushSend(items,tx('msg.from',{name:nameOf(S.pid)}),String(text).slice(0,200));
 }
 function ntShow(title,body,tag){
   if(!ntOn())return;
@@ -488,7 +499,7 @@ function ntCheck(key,arr){
   else fresh=fresh.filter(function(x){return x.from!==S.pid});
   fresh.slice(0,3).forEach(function(x){
     if(key==='notifs')ntShow('FamilyQuest',x.text,'n-'+x.id);
-    else ntShow(nameOf(x.from)+' · message',x.text,'m-'+x.id);
+    else ntShow(tx('msg.from',{name:nameOf(x.from)}),x.text,'m-'+x.id);
   });
 }
 function ntBadge(){
@@ -529,47 +540,47 @@ function signOutAll(){pushOff();forget();S.step='welcome';ntBadge();try{window.Q
 function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();LS.del('qf-fid');LS.del('qf-pid');S.pid=null;S.kf=null;saveSession()}
 
 /* ---------- Vues d'accueil ---------- */
-var vLoading=function(){return '<div class="center"><span class="coin big spin">'+ic('star')+'</span><p class="muted">'+(S.slow?'La base de données ne répond pas encore.':'Ouverture du carnet…')+'</p>'+(S.slow&&S.fid?'<button class="link" data-a="leave">Quitter cette famille sur cet appareil</button>':'')+'</div>'};
-var vBlocked=function(){return '<div class="center"><h1>Service indisponible</h1><p class="muted">Impossible de joindre le service. Vérifie ta connexion Internet, puis recharge la page.</p></div>'};
-var vWelcome=function(){return '<section class="auth"><div class="brand"><span class="coin big">'+ic('star')+'</span><h1>FamilyQuest</h1><p class="lead">Les tâches de la maison deviennent des quêtes. Chaque quête validée par un tuteur rapporte des points, à échanger contre des récompenses.</p></div>'+
- '<button class="role t" data-a="role" data-v="tutor"><b>Je suis tuteur</b><span>Je crée la famille et les quêtes, et je valide le travail.</span></button>'+
- '<button class="role k" data-a="role" data-v="kid"><b>Je suis mineur</b><span>Un tuteur a créé mon profil. Je me connecte avec le code famille.</span></button><button class="link" data-a="login">Déjà inscrit ? Me connecter</button></section>'};
+var vLoading=function(){return '<div class="center"><span class="coin big spin">'+ic('star')+'</span><p class="muted">'+(S.slow?tx('load.slow'):tx('load.opening'))+'</p>'+(S.slow&&S.fid?'<button class="link" data-a="leave">'+tx('load.leave')+'</button>':'')+'</div>'};
+var vBlocked=function(){return '<div class="center"><h1>'+tx('blocked.title')+'</h1><p class="muted">'+tx('blocked.text')+'</p></div>'};
+var vWelcome=function(){return '<section class="auth"><div class="brand"><span class="coin big">'+ic('star')+'</span><h1>FamilyQuest</h1><p class="lead">'+tx('welcome.lead')+'</p></div>'+
+ '<button class="role t" data-a="role" data-v="tutor"><b>'+tx('welcome.tutor')+'</b><span>'+tx('welcome.tutor2')+'</span></button>'+
+ '<button class="role k" data-a="role" data-v="kid"><b>'+tx('welcome.kid')+'</b><span>'+tx('welcome.kid2')+'</span></button><button class="link" data-a="login">'+tx('welcome.login')+'</button><button class="link" data-a="lang" style="display:block;padding-top:0">'+tx('lang.other')+'</button></section>'};
 function vTutor(){
   var c=S.tmode!=='join';
-  var tabs='<div class="seg"><button class="'+(c?'on':'')+'" data-a="tmode" data-v="create">Créer une famille</button><button class="'+(c?'':'on')+'" data-a="tmode" data-v="join">Rejoindre</button></div>';
-  var pin=function(id){return '<div class="field"><label for="'+id+'">Code tuteur (8 à 12 caractères)</label><input id="'+id+'" type="password" maxlength="12" autocomplete="off" autocapitalize="off"><small>'+(c?"Il sert à inviter un autre tuteur. Garde-le pour les parents seulement.":'Le code tuteur choisi à la création de la famille.')+'</small></div>'};
-  var mail=function(id){return '<div class="field"><label for="'+id+'">Adresse e-mail</label><input id="'+id+'" type="email" autocomplete="email" autocapitalize="off" spellcheck="false"><small>Pour te connecter et récupérer ton mot de passe.</small></div>'};
+  var tabs='<div class="seg"><button class="'+(c?'on':'')+'" data-a="tmode" data-v="create">'+tx('tutor.create')+'</button><button class="'+(c?'':'on')+'" data-a="tmode" data-v="join">'+tx('tutor.join')+'</button></div>';
+  var pin=function(id){return '<div class="field"><label for="'+id+'">'+tx('field.pin')+'</label><input id="'+id+'" type="password" maxlength="12" autocomplete="off" autocapitalize="off"><small>'+(c?tx('field.pin.create'):tx('field.pin.join'))+'</small></div>'};
+  var mail=function(id){return '<div class="field"><label for="'+id+'">'+tx('field.email')+'</label><input id="'+id+'" type="email" autocomplete="email" autocapitalize="off" spellcheck="false"><small>'+tx('field.email.hint')+'</small></div>'};
   var form=c?
-   '<form data-submit="createFam"><div class="field"><label for="f-name">Nom de la famille</label><input id="f-name" type="text" maxlength="40" placeholder="Les Martin" autocomplete="off"></div>'+
-   '<div class="field"><label for="f-pseudo">Ton pseudo</label><input id="f-pseudo" type="text" maxlength="24" placeholder="Maman, Papa, Julie…" autocomplete="off"></div>'+mail('f-email')+passField('f-pass',true)+pin('f-pin')+
-   '<p class="err" role="alert"></p><button class="btn block" type="submit">Créer la famille</button></form>':
-   '<form data-submit="joinTutor"><div class="field"><label for="j-code">Code famille</label><input id="j-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123"></div>'+
-   '<div class="field"><label for="j-pseudo">Ton pseudo</label><input id="j-pseudo" type="text" maxlength="24" autocomplete="off"></div>'+mail('j-email')+passField('j-pass',true)+pin('j-pin')+
-   '<p class="err" role="alert"></p><button class="btn block" type="submit">Rejoindre</button></form>';
-  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Espace tuteur</h1>'+tabs+form+'</section>';
+   '<form data-submit="createFam"><div class="field"><label for="f-name">'+tx('field.famname')+'</label><input id="f-name" type="text" maxlength="40" placeholder="'+tx('ph.famname')+'" autocomplete="off"></div>'+
+   '<div class="field"><label for="f-pseudo">'+tx('field.yourpseudo')+'</label><input id="f-pseudo" type="text" maxlength="24" placeholder="'+tx('ph.tutorpseudo')+'" autocomplete="off"></div>'+mail('f-email')+passField('f-pass',true)+pin('f-pin')+
+   '<p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('tutor.createbtn')+'</button></form>':
+   '<form data-submit="joinTutor"><div class="field"><label for="j-code">'+tx('field.code')+'</label><input id="j-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123"></div>'+
+   '<div class="field"><label for="j-pseudo">'+tx('field.yourpseudo')+'</label><input id="j-pseudo" type="text" maxlength="24" autocomplete="off"></div>'+mail('j-email')+passField('j-pass',true)+pin('j-pin')+
+   '<p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('tutor.join')+'</button></form>';
+  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' '+tx('back')+'</button><h1>'+tx('tutor.title')+'</h1>'+tabs+form+'</section>';
 }
-var vKid=function(){return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Rejoindre ma famille</h1><p class="lead">Demande le code famille à un tuteur.</p><form data-submit="lookupKid" style="margin-top:18px"><div class="field"><label for="k-code">Code famille</label><input id="k-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Continuer</button></form></section>'};
-var passField=function(id,req){return '<div class="field"><label for="'+id+'">Mot de passe</label><input id="'+id+'" type="password" autocomplete="new-password"><small>6 caractères minimum.</small></div>'};
+var vKid=function(){return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' '+tx('back')+'</button><h1>'+tx('kidjoin.title')+'</h1><p class="lead">'+tx('kidjoin.lead')+'</p><form data-submit="lookupKid" style="margin-top:18px"><div class="field"><label for="k-code">'+tx('field.code')+'</label><input id="k-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.continue')+'</button></form></section>'};
+var passField=function(id,req){return '<div class="field"><label for="'+id+'">'+tx('field.password')+'</label><input id="'+id+'" type="password" autocomplete="new-password"><small>'+tx('field.password.hint')+'</small></div>'};
 var kidForm=function(){
   var lk=S.lk;
-  if(!lk)return '<form data-submit="kidCode"><div class="field"><label for="l-code">Code famille</label><input id="l-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123" value="'+esc(LS.get('qf-code')||'')+'"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Continuer</button></form>';
+  if(!lk)return '<form data-submit="kidCode"><div class="field"><label for="l-code">'+tx('field.code')+'</label><input id="l-code" class="code-in" type="text" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC 123" value="'+esc(LS.get('qf-code')||'')+'"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.continue')+'</button></form>';
   var who=lk.kids.length?
-    '<div class="field"><span class="lbl">Qui es-tu ?</span><div class="pills">'+lk.kids.map(function(n){return '<button type="button" class="pill'+(S.lkSel===n?' on':'')+'" data-a="lkPick" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div></div>':
-    '<p class="muted">Aucun profil n\'est encore enregistré pour ce code. Saisis ton pseudo.</p><div class="field"><label for="l-pseudo">Pseudo</label><input id="l-pseudo" type="text" maxlength="24" autocomplete="username" autocapitalize="off"></div>';
-  return '<form data-submit="doLogin"><p class="muted">Famille <b>'+esc(fmtCode(lk.code))+'</b> · <button type="button" class="link" data-a="lkReset">Changer</button></p>'+who+'<div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Me connecter</button></form>';
+    '<div class="field"><span class="lbl">'+tx('kid.who')+'</span><div class="pills">'+lk.kids.map(function(n){return '<button type="button" class="pill'+(S.lkSel===n?' on':'')+'" data-a="lkPick" data-v="'+esc(n)+'">'+esc(n)+'</button>'}).join('')+'</div></div>':
+    '<p class="muted">'+tx('kid.noprofile')+'</p><div class="field"><label for="l-pseudo">'+tx('field.pseudo')+'</label><input id="l-pseudo" type="text" maxlength="24" autocomplete="username" autocapitalize="off"></div>';
+  return '<form data-submit="doLogin"><p class="muted">'+tx('kid.family')+' <b>'+esc(fmtCode(lk.code))+'</b> · <button type="button" class="link" data-a="lkReset">'+tx('kid.change')+'</button></p>'+who+'<div class="field"><label for="l-pass">'+tx('field.password')+'</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.login')+'</button></form>';
 };
 var vLogin=function(){
   var k=S.lmode==='kid';
-  var tabs='<div class="seg"><button class="'+(k?'':'on')+'" data-a="lmode" data-v="tutor">Tuteur</button><button class="'+(k?'on':'')+'" data-a="lmode" data-v="kid">Mineur</button></div>';
+  var tabs='<div class="seg"><button class="'+(k?'':'on')+'" data-a="lmode" data-v="tutor">'+tx('role.tutor')+'</button><button class="'+(k?'on':'')+'" data-a="lmode" data-v="kid">'+tx('role.kid')+'</button></div>';
   var f=k?kidForm():
-   '<form data-submit="doLogin"><div class="field"><label for="l-email">Adresse e-mail</label><input id="l-email" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="l-pass">Mot de passe</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Me connecter</button><button class="link" type="button" data-a="forgot">Mot de passe oublié ?</button></form>';
-  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' Retour</button><h1>Se connecter</h1><p class="lead">'+(k?'Entre le code de ta famille, choisis ton prénom, puis ton mot de passe.':'Avec ton adresse e-mail et ton mot de passe.')+'</p>'+tabs+f+'</section>';
+   '<form data-submit="doLogin"><div class="field"><label for="l-email">'+tx('field.email')+'</label><input id="l-email" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="l-pass">'+tx('field.password')+'</label><input id="l-pass" type="password" autocomplete="current-password"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.login')+'</button><button class="link" type="button" data-a="forgot">'+tx('login.forgot')+'</button></form>';
+  return '<section class="auth"><button class="back" data-a="back">'+ic('back')+' '+tx('back')+'</button><h1>'+tx('login.title')+'</h1><p class="lead">'+(k?tx('login.kid.lead'):tx('login.tutor.lead'))+'</p>'+tabs+f+'</section>';
 };
-var newKidForm=function(enterAfter){return '<form data-submit="newKid" data-enter="0"><div class="field"><label for="n-pseudo">Pseudo</label><input id="n-pseudo" type="text" maxlength="20" autocomplete="off"></div><div class="field"><label for="n-age">Âge</label><input id="n-age" type="number" inputmode="numeric" min="3" max="17"></div><div class="field"><label for="n-pass">Mot de passe du mineur</label><input id="n-pass" type="password" autocomplete="new-password"><small>6 caractères minimum. Tu pourras le revoir ou le changer. Pour se connecter, le mineur utilisera le code famille, son pseudo et ce mot de passe.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Ajouter</button></form>'};
-var kidRows=function(){var ks=kids();if(!S.got.people)return '<p class="muted">Chargement…</p>';if(!ks.length)return '<p class="muted">Aucun mineur pour l\'instant. Crée ton profil ci-dessous.</p>';return ks.map(function(k){return '<button class="row" data-a="pickKid" data-id="'+esc(k.id)+'">'+av(k)+'<span class="grow"><b>'+esc(k.pseudo)+'</b><small>'+(k.age?k.age+' ans':'Mineur')+'</small></span><span class="bal">'+coin()+bal(k.id)+'</span></button>'}).join('')};
-var vKidPick=function(){return '<section class="auth"><button class="back" data-a="leave">'+ic('back')+' Changer de famille</button><h1>'+esc((S.fam&&S.fam.name)||(S.kf&&S.kf.name)||'Ma famille')+'</h1><p class="lead">Qui es-tu ?</p><div id="plist" style="margin-top:14px"></div><h2 class="sec">Nouveau profil</h2>'+newKidForm(true)+'</section>'};
-var whoRows=function(){if(!S.got.people)return '<p class="muted">Chargement…</p>';var all=tutors().concat(kids());return all.map(function(p){var t=p.role==='tuteur';return '<button class="row" data-a="pickWho" data-id="'+esc(p.id)+'">'+av(p)+'<span class="grow"><b>'+esc(p.pseudo)+'</b><small>'+(t?'Tuteur':(p.age?p.age+' ans':'Mineur'))+'</small></span>'+(t?'<span class="tag">PIN</span>':'<span class="bal">'+coin()+bal(p.id)+'</span>')+'</button>'}).join('')};
-var vWho=function(){return '<section class="auth"><h1>'+esc(fam().name||'Ma famille')+'</h1><p class="lead">Qui est là ?</p><div id="plist" style="margin-top:14px"></div>'+btn(ic('plus')+' Nouveau mineur','newKidSheet',{cls:'ghost block'})+'<button class="link" data-a="leave">Changer de famille</button></section>'};
+var newKidForm=function(enterAfter){return '<form data-submit="newKid" data-enter="0"><div class="field"><label for="n-pseudo">'+tx('field.pseudo')+'</label><input id="n-pseudo" type="text" maxlength="20" autocomplete="off"></div><div class="field"><label for="n-age">'+tx('field.age')+'</label><input id="n-age" type="number" inputmode="numeric" min="3" max="17"></div><div class="field"><label for="n-pass">'+tx('field.kidpass')+'</label><input id="n-pass" type="password" autocomplete="new-password"><small>'+tx('field.kidpass.hint')+'</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.add')+'</button></form>'};
+var kidRows=function(){var ks=kids();if(!S.got.people)return '<p class="muted">'+tx('loading')+'</p>';if(!ks.length)return '<p class="muted">'+tx('kids.none.create')+'</p>';return ks.map(function(k){return '<button class="row" data-a="pickKid" data-id="'+esc(k.id)+'">'+av(k)+'<span class="grow"><b>'+esc(k.pseudo)+'</b><small>'+(k.age?tx('age.years',{n:k.age}):tx('role.kid'))+'</small></span><span class="bal">'+coin()+bal(k.id)+'</span></button>'}).join('')};
+var vKidPick=function(){return '<section class="auth"><button class="back" data-a="leave">'+ic('back')+' '+tx('fam.change')+'</button><h1>'+esc((S.fam&&S.fam.name)||(S.kf&&S.kf.name)||tx('fam.mine'))+'</h1><p class="lead">'+tx('kid.who')+'</p><div id="plist" style="margin-top:14px"></div><h2 class="sec">'+tx('kid.newprofile')+'</h2>'+newKidForm(true)+'</section>'};
+var whoRows=function(){if(!S.got.people)return '<p class="muted">'+tx('loading')+'</p>';var all=tutors().concat(kids());return all.map(function(p){var t=p.role==='tuteur';return '<button class="row" data-a="pickWho" data-id="'+esc(p.id)+'">'+av(p)+'<span class="grow"><b>'+esc(p.pseudo)+'</b><small>'+(t?tx('role.tutor'):(p.age?tx('age.years',{n:p.age}):tx('role.kid')))+'</small></span>'+(t?'<span class="tag">PIN</span>':'<span class="bal">'+coin()+bal(p.id)+'</span>')+'</button>'}).join('')};
+var vWho=function(){return '<section class="auth"><h1>'+esc(fam().name||tx('fam.mine'))+'</h1><p class="lead">'+tx('who.here')+'</p><div id="plist" style="margin-top:14px"></div>'+btn(ic('plus')+' '+tx('kid.new'),'newKidSheet',{cls:'ghost block'})+'<button class="link" data-a="leave">'+tx('fam.change')+'</button></section>'};
 
 /* ---------- Composants de l'espace famille ---------- */
 function tk(q,o){
@@ -580,23 +591,23 @@ function wcard(w,o){
   o=o||{};
   return '<article class="card wish"><div class="wh"><div class="grow">'+(o.chips?'<div class="chips">'+o.chips+'</div>':'')+'<h3>'+esc(w.title)+'</h3>'+(w.note?'<p class="muted">'+esc(w.note)+'</p>':'')+(o.sub||'')+'</div>'+(o.cost!=null?'<span class="price">'+coin()+o.cost+'</span>':'')+'</div>'+(o.acts?'<div class="acts">'+o.acts+'</div>':'')+'</article>';
 }
-var forChip=function(q){return '<span class="chip">'+(q.assignedTo==='all'?'Tous les mineurs':'Pour '+esc(nameOf(q.assignedTo)))+'</span>'+(q.repeat?'<span class="chip gold">Récurrente</span>':'')+dueChip(q)+catChip(q)};
+var forChip=function(q){return '<span class="chip">'+(q.assignedTo==='all'?tx('chip.allkids'):tx('chip.for',{name:esc(nameOf(q.assignedTo))}))+'</span>'+(q.repeat?'<span class="chip gold">'+tx('chip.recurring')+'</span>':'')+dueChip(q)+catChip(q)};
 var byChip=function(id,txt){return '<span class="chip">'+av(P(id),'s')+' '+esc(nameOf(id))+(txt?' · '+txt:'')+'</span>'};
-var forWish=function(w){return '<span class="chip">'+(w.for==='all'?'Pour tous':'Pour '+esc(nameOf(w.for)))+'</span>'};
+var forWish=function(w){return '<span class="chip">'+(w.for==='all'?tx('chip.forall'):tx('chip.for',{name:esc(nameOf(w.for))}))+'</span>'};
 var sec=function(t,n){return '<h2 class="sec">'+t+(n!=null?' <span class="n">'+n+'</span>':'')+'</h2>'};
-var delBtn=function(a,id){return btn(ic('trash')+' Supprimer',a,{id:id,cls:'ghost sm'})};
+var delBtn=function(a,id){return btn(ic('trash')+' '+tx('btn.delete'),a,{id:id,cls:'ghost sm'})};
 
 /* ---------- Espace tuteur ---------- */
 function vValider(){
   var pq=S.quests.filter(function(q){return q.status==='a_valider'});
   var wd=S.wishes.filter(function(w){return w.status==='demande'});
   var we=S.wishes.filter(function(w){return w.status==='echange'});
-  if(!kids().length)return empty("Aucun mineur pour l'instant","Donne le code famille aux mineurs, ou ajoute un profil depuis l'onglet Famille.",btn('Voir le code famille','tab',{v:'famille'}));
-  if(!pq.length&&!wd.length&&!we.length)return empty('Rien à valider','Quand un mineur coche une quête ou fait une demande, tu la retrouves ici et dans tes notifications.',btn(ic('plus')+' Créer une quête','questSheet'));
+  if(!kids().length)return empty(tx('none.kids.t'),tx('none.kids.d'),btn(tx('btn.seecode'),'tab',{v:'famille'}));
+  if(!pq.length&&!wd.length&&!we.length)return empty(tx('val.none.t'),tx('val.none.d'),btn(ic('plus')+' '+tx('quest.create'),'questSheet'));
   var h='';
-  if(pq.length)h+=sec('Quêtes terminées',pq.length)+pq.map(function(q){return tk(q,{chips:byChip(q.doneBy,'a terminé '+ago(q.doneAt))+catChip(q),note:q.doneNote?'<p class="muted">« '+esc(q.doneNote)+' »</p>':'',acts:btn('Valider','validate',{id:q.id,cls:'ok'})+btn('Bonus…','validateSheet',{id:q.id,cls:'ghost'})+btn('À refaire','refuseSheet',{id:q.id,cls:'ghost'})})}).join('');
-  if(wd.length)h+=sec('Demandes à chiffrer',wd.length)+wd.map(function(w){return wcard(w,{chips:byChip(w.by,ago(w.createdAt)),acts:btn('Fixer le prix','priceSheet',{id:w.id})})}).join('');
-  if(we.length)h+=sec('Échanges à remettre',we.length)+we.map(function(w){return wcard(w,{cost:w.cost,chips:byChip(w.redeemedBy,'échange '+ago(w.exchangedAt||w.createdAt)),acts:btn('Marquer comme remis','deliver',{id:w.id,cls:'ok'})})}).join('');
+  if(pq.length)h+=sec(tx('sec.questsdone'),pq.length)+pq.map(function(q){return tk(q,{chips:byChip(q.doneBy,tx('chip.finished',{ago:ago(q.doneAt)}))+catChip(q),note:q.doneNote?'<p class="muted">'+tx('quote',{t:esc(q.doneNote)})+'</p>':'',acts:btn(tx('btn.approve'),'validate',{id:q.id,cls:'ok'})+btn(tx('btn.bonus'),'validateSheet',{id:q.id,cls:'ghost'})+btn(tx('btn.redo'),'refuseSheet',{id:q.id,cls:'ghost'})})}).join('');
+  if(wd.length)h+=sec(tx('sec.pricing'),wd.length)+wd.map(function(w){return wcard(w,{chips:byChip(w.by,ago(w.createdAt)),acts:btn(tx('btn.setprice'),'priceSheet',{id:w.id})})}).join('');
+  if(we.length)h+=sec(tx('sec.todeliver'),we.length)+we.map(function(w){return wcard(w,{cost:w.cost,chips:byChip(w.redeemedBy,tx('chip.exchange',{ago:ago(w.exchangedAt||w.createdAt)})),acts:btn(tx('btn.deliver'),'deliver',{id:w.id,cls:'ok'})})}).join('');
   return h;
 }
 function vQuetesT(){
@@ -604,12 +615,12 @@ function vQuetesT(){
   var open=QS.filter(function(q){return q.status==='open'&&!isExp(q)}).sort(byPrio);var exp=QS.filter(isExp);
   var wait=QS.filter(function(q){return q.status==='a_valider'});
   var done=QS.filter(function(q){return q.status==='validee'}).slice(0,8);
-  var h=btn(ic('plus')+' Nouvelle quête','questSheet',{cls:'block'})+(kids().length>1?'<div class="pills" style="margin:14px 0 0"><button class="pill'+(S.qf==='all'?' on':'')+'" data-a="qfilter" data-v="all">Tous</button>'+kids().map(function(k){return '<button class="pill'+(S.qf===k.id?' on':'')+'" data-a="qfilter" data-v="'+esc(k.id)+'">'+esc(k.pseudo)+'</button>'}).join('')+'</div>':'');
-  if(!S.quests.length)return h+empty('Aucune quête','Crée la première : un titre, des points, un mineur (ou tous).');
-  if(open.length)h+=sec('Ouvertes',open.length)+open.map(function(q){return tk(q,{chips:forChip(q),note:q.refusal?'<p class="note">À refaire : '+esc(q.refusal)+'</p>':'',acts:editBtn(q.id)+delBtn('delQuest',q.id)})}).join('');
-  if(wait.length)h+=sec('En attente de validation',wait.length)+wait.map(function(q){return tk(q,{state:'wait',chips:forChip(q)+'<span class="chip">'+esc(nameOf(q.doneBy))+' a terminé</span>',acts:btn('Aller valider','tab',{v:'valider',cls:'ghost sm'})})}).join('');
-  if(exp.length)h+=sec('Expirées',exp.length)+exp.map(function(q){return tk(q,{state:'wait',chips:forChip(q),acts:editBtn(q.id)+delBtn('delQuest',q.id)})}).join('');
-  if(done.length)h+=sec('Validées récemment')+done.map(function(q){return tk(q,{state:'done',chips:byChip(q.doneBy)+'<span class="chip ok">Validée</span>'+(q.bonus?'<span class="chip gold">+'+q.bonus+' bonus</span>':''),note:q.comment?'<p class="muted">Ton message : « '+esc(q.comment)+' »</p>':'',acts:btn('Annuler la validation','undoValidate',{id:q.id,cls:'ghost sm'})})}).join('');
+  var h=btn(ic('plus')+' '+tx('quest.new'),'questSheet',{cls:'block'})+(kids().length>1?'<div class="pills" style="margin:14px 0 0"><button class="pill'+(S.qf==='all'?' on':'')+'" data-a="qfilter" data-v="all">'+tx('pill.all')+'</button>'+kids().map(function(k){return '<button class="pill'+(S.qf===k.id?' on':'')+'" data-a="qfilter" data-v="'+esc(k.id)+'">'+esc(k.pseudo)+'</button>'}).join('')+'</div>':'');
+  if(!S.quests.length)return h+empty(tx('quests.none.t'),tx('quests.none.d'));
+  if(open.length)h+=sec(tx('sec.open'),open.length)+open.map(function(q){return tk(q,{chips:forChip(q),note:q.refusal?'<p class="note">'+noteRedo(q)+'</p>':'',acts:editBtn(q.id)+delBtn('delQuest',q.id)})}).join('');
+  if(wait.length)h+=sec(tx('sec.waitapprove'),wait.length)+wait.map(function(q){return tk(q,{state:'wait',chips:forChip(q)+'<span class="chip">'+tx('chip.hasfinished',{name:esc(nameOf(q.doneBy))})+'</span>',acts:btn(tx('btn.gotoapprove'),'tab',{v:'valider',cls:'ghost sm'})})}).join('');
+  if(exp.length)h+=sec(tx('sec.expired'),exp.length)+exp.map(function(q){return tk(q,{state:'wait',chips:forChip(q),acts:editBtn(q.id)+delBtn('delQuest',q.id)})}).join('');
+  if(done.length)h+=sec(tx('sec.approvedrecent'))+done.map(function(q){return tk(q,{state:'done',chips:byChip(q.doneBy)+'<span class="chip ok">'+tx('chip.approved')+'</span>'+(q.bonus?'<span class="chip gold">'+tx('chip.bonus',{n:q.bonus})+'</span>':''),note:q.comment?'<p class="muted">'+tx('note.yourmsg',{t:esc(q.comment)})+'</p>':'',acts:btn(tx('btn.undoapprove'),'undoValidate',{id:q.id,cls:'ghost sm'})})}).join('');
   return h;
 }
 function vRecT(){
@@ -617,21 +628,21 @@ function vRecT(){
   var cat=S.wishes.filter(function(w){return w.status==='accepte'});
   var ex=S.wishes.filter(function(w){return w.status==='echange'||w.status==='remis'}).slice(0,8);
   var rf=S.wishes.filter(function(w){return w.status==='refuse'}).slice(0,4);
-  var h=btn(ic('plus')+' Proposer une récompense','rewardSheet',{cls:'block'});
-  if(!S.wishes.length)return h+empty('Aucune récompense','Propose-en une, ou attends que les mineurs fassent une demande. Tu fixes toujours le nombre de points.');
-  if(wd.length)h+=sec('Demandes à chiffrer',wd.length)+wd.map(function(w){return wcard(w,{chips:byChip(w.by,ago(w.createdAt)),acts:btn('Fixer le prix','priceSheet',{id:w.id})})}).join('');
-  if(cat.length)h+=sec('Au catalogue',cat.length)+cat.map(function(w){return wcard(w,{cost:w.cost,chips:forWish(w),acts:btn(ic('edit')+' Modifier','editReward',{id:w.id,cls:'ghost sm'})+delBtn('delWish',w.id)})}).join('');
-  if(ex.length)h+=sec('Échangées')+ex.map(function(w){return wcard(w,{cost:w.cost,chips:byChip(w.redeemedBy)+(w.status==='remis'?'<span class="chip ok">Remise</span>':'<span class="chip gold">À remettre</span>')})}).join('');
-  if(rf.length)h+=sec('Refusées')+rf.map(function(w){return wcard(w,{chips:byChip(w.by)+'<span class="chip bad">Refusée</span>',sub:w.refusal?'<p class="muted">'+esc(w.refusal)+'</p>':''})}).join('');
+  var h=btn(ic('plus')+' '+tx('reward.propose'),'rewardSheet',{cls:'block'});
+  if(!S.wishes.length)return h+empty(tx('rewards.none.t'),tx('rewards.none.d'));
+  if(wd.length)h+=sec(tx('sec.pricing'),wd.length)+wd.map(function(w){return wcard(w,{chips:byChip(w.by,ago(w.createdAt)),acts:btn(tx('btn.setprice'),'priceSheet',{id:w.id})})}).join('');
+  if(cat.length)h+=sec(tx('sec.catalog'),cat.length)+cat.map(function(w){return wcard(w,{cost:w.cost,chips:forWish(w),acts:btn(ic('edit')+' '+tx('btn.edit'),'editReward',{id:w.id,cls:'ghost sm'})+delBtn('delWish',w.id)})}).join('');
+  if(ex.length)h+=sec(tx('sec.exchanged'))+ex.map(function(w){return wcard(w,{cost:w.cost,chips:byChip(w.redeemedBy)+(w.status==='remis'?'<span class="chip ok">'+tx('chip.delivered')+'</span>':'<span class="chip gold">'+tx('chip.todeliver')+'</span>')})}).join('');
+  if(rf.length)h+=sec(tx('sec.declined'))+rf.map(function(w){return wcard(w,{chips:byChip(w.by)+'<span class="chip bad">'+tx('chip.declined')+'</span>',sub:w.refusal?'<p class="muted">'+esc(w.refusal)+'</p>':''})}).join('');
   return h;
 }
 function vFamille(){
   var f=fam();
-  var h='<div class="card"><span class="lbl">Code famille</span><div class="code">'+esc(fmtCode(f.code||''))+'</div><p class="muted">Les mineurs saisissent ce code pour rejoindre « '+esc(f.name||'')+' ». Un autre tuteur a aussi besoin du PIN.</p>'+btn(ic('copy')+' Copier le code','copy',{cls:'ghost'})+'</div>';
-  h+=sec('Mineurs',kids().length);
-  h+=kids().map(function(k){return '<button class="row" data-a="kidSheet" data-id="'+esc(k.id)+'">'+av(k)+'<span class="grow"><b>'+esc(k.pseudo)+'</b><small>'+(k.age?k.age+' ans':'Âge non renseigné')+(k.phone?' · '+esc(phoneShow(k.phone)):'')+'</small></span><span class="bal">'+coin()+bal(k.id)+'</span></button>'}).join('');
-  h+=btn(ic('plus')+' Ajouter un mineur','newKidSheet',{cls:'ghost block'});
-  h+=sec('Tuteurs',tutors().length)+tutors().map(function(t){return '<div class="row">'+av(t)+'<span class="grow"><b>'+esc(t.pseudo)+'</b>'+(t.phone?'<small>'+esc(phoneShow(t.phone))+'</small>':'')+'</span></div>'}).join('');
+  var h='<div class="card"><span class="lbl">'+tx('field.code')+'</span><div class="code">'+esc(fmtCode(f.code||''))+'</div><p class="muted">'+tx('fam.codehelp',{name:esc(f.name||'')})+'</p>'+btn(ic('copy')+' '+tx('btn.copycode'),'copy',{cls:'ghost'})+'</div>';
+  h+=sec(tx('sec.kids'),kids().length);
+  h+=kids().map(function(k){return '<button class="row" data-a="kidSheet" data-id="'+esc(k.id)+'">'+av(k)+'<span class="grow"><b>'+esc(k.pseudo)+'</b><small>'+(k.age?tx('age.years',{n:k.age}):tx('age.unknown'))+(k.phone?' · '+esc(phoneShow(k.phone)):'')+'</small></span><span class="bal">'+coin()+bal(k.id)+'</span></button>'}).join('');
+  h+=btn(ic('plus')+' '+tx('kid.add'),'newKidSheet',{cls:'ghost block'});
+  h+=sec(tx('sec.tutors'),tutors().length)+tutors().map(function(t){return '<div class="row">'+av(t)+'<span class="grow"><b>'+esc(t.pseudo)+'</b>'+(t.phone?'<small>'+esc(phoneShow(t.phone))+'</small>':'')+'</span></div>'}).join('');
   return h;
 }
 
@@ -643,12 +654,12 @@ function vQuetesK(){
   var wait=mine.filter(function(q){return q.status==='a_valider'&&q.doneBy===m.id});
   var done=mine.filter(function(q){return q.status==='validee'&&q.doneBy===m.id}).slice(0,5);
   var h='';
-  if(!todo.length&&!wait.length&&!done.length&&!expK.length)return empty('Pas de quête pour le moment',"Un tuteur peut t'en confier une. Tu peux aussi demander une récompense qui te fait envie.",btn('Voir les récompenses','tab',{v:'recompenses'}));
-  if(todo.length)h+=sec('À faire',todo.length)+todo.map(function(q){return tk(q,{chips:(q.assignedTo==='all'?'<span class="chip">Pour tous · le premier qui la fait</span>':'')+(q.repeat?'<span class="chip gold">Récurrente</span>':'')+dueChip(q)+catChip(q),note:q.refusal?'<p class="note">À refaire : '+esc(q.refusal)+'</p>':'',acts:btn('<span class="box"></span> J’ai fini','finish',{id:q.id}),live:true})}).join('');
-  else h+=empty('Tout est fait','Beau travail. Les nouvelles quêtes apparaîtront ici.');
-  if(wait.length)h+=sec('En attente du tuteur',wait.length)+wait.map(function(q){return tk(q,{state:'wait',chips:'<span class="chip">Envoyée '+ago(q.doneAt)+'</span>',acts:btn('Annuler','undo',{id:q.id,cls:'ghost sm'})})}).join('');
-  if(expK.length)h+=sec('Expirées',expK.length)+expK.map(function(q){return tk(q,{state:'wait',chips:dueChip(q)+'<span class="chip">Plus de points possibles</span>'})}).join('');
-  if(done.length)h+=sec('Validées')+done.map(function(q){return tk(q,{state:'done',chips:'<span class="chip ok">Validée</span>'+(q.bonus?'<span class="chip gold">+'+q.bonus+' bonus</span>':''),note:q.comment?'<p class="muted">Message : « '+esc(q.comment)+' »</p>':''})}).join('');
+  if(!todo.length&&!wait.length&&!done.length&&!expK.length)return empty(tx('kq.none.t'),tx('kq.none.d'),btn(tx('btn.seerewards'),'tab',{v:'recompenses'}));
+  if(todo.length)h+=sec(tx('sec.todo'),todo.length)+todo.map(function(q){return tk(q,{chips:(q.assignedTo==='all'?'<span class="chip">'+tx('chip.firstcome')+'</span>':'')+(q.repeat?'<span class="chip gold">'+tx('chip.recurring')+'</span>':'')+dueChip(q)+catChip(q),note:q.refusal?'<p class="note">'+noteRedo(q)+'</p>':'',acts:btn('<span class="box"></span> '+tx('btn.idone'),'finish',{id:q.id}),live:true})}).join('');
+  else h+=empty(tx('kq.alldone.t'),tx('kq.alldone.d'));
+  if(wait.length)h+=sec(tx('sec.waitguardian'),wait.length)+wait.map(function(q){return tk(q,{state:'wait',chips:'<span class="chip">'+tx('chip.sent',{ago:ago(q.doneAt)})+'</span>',acts:btn(tx('btn.cancel'),'undo',{id:q.id,cls:'ghost sm'})})}).join('');
+  if(expK.length)h+=sec(tx('sec.expired'),expK.length)+expK.map(function(q){return tk(q,{state:'wait',chips:dueChip(q)+'<span class="chip">'+tx('chip.nopoints')+'</span>'})}).join('');
+  if(done.length)h+=sec(tx('sec.approved'))+done.map(function(q){return tk(q,{state:'done',chips:'<span class="chip ok">'+tx('chip.approved')+'</span>'+(q.bonus?'<span class="chip gold">'+tx('chip.bonus',{n:q.bonus})+'</span>':''),note:q.comment?'<p class="muted">'+tx('note.msg',{t:esc(q.comment)})+'</p>':''})}).join('');
   return h;
 }
 function vRecK(){
@@ -656,14 +667,14 @@ function vRecK(){
   var cat=S.wishes.filter(function(w){return w.status==='accepte'&&(w.for===m.id||w.for==='all')}).sort(function(a,c){return a.cost-c.cost});
   var req=S.wishes.filter(function(w){return w.by===m.id&&(w.status==='demande'||w.status==='refuse')});
   var ex=S.wishes.filter(function(w){return (w.status==='echange'||w.status==='remis')&&w.redeemedBy===m.id}).slice(0,6);
-  var h=btn(ic('plus')+' Je voudrais…','wishSheet',{cls:'block'});
-  if(cat.length)h+=sec('Disponibles',cat.length)+cat.map(function(w){
+  var h=btn(ic('plus')+' '+tx('wish.iwant'),'wishSheet',{cls:'block'});
+  if(cat.length)h+=sec(tx('sec.available'),cat.length)+cat.map(function(w){
     var ok=b>=w.cost;
-    return wcard(w,{cost:w.cost,sub:'<progress max="'+w.cost+'" value="'+Math.min(b,w.cost)+'" aria-label="Progression"></progress>',acts:(ok?btn('Échanger mes points','exchange',{id:w.id,cls:'ok'}):'<span class="muted">Encore '+plural(w.cost-b)+'</span>')+btn(m.goal===w.id?'Objectif choisi':'En faire mon objectif','goal',{id:w.id,cls:'ghost sm'})});
+    return wcard(w,{cost:w.cost,sub:'<progress max="'+w.cost+'" value="'+Math.min(b,w.cost)+'" aria-label="'+tx('aria.progress')+'"></progress>',acts:(ok?btn(tx('btn.exchange'),'exchange',{id:w.id,cls:'ok'}):'<span class="muted">'+tx('wish.still',{p:plural(w.cost-b)})+'</span>')+btn(m.goal===w.id?tx('btn.goalchosen'):tx('btn.makegoal'),'goal',{id:w.id,cls:'ghost sm'})});
   }).join('');
-  if(req.length)h+=sec('Mes demandes')+req.map(function(w){return wcard(w,{chips:w.status==='demande'?'<span class="chip">En attente du prix fixé par le tuteur</span>':'<span class="chip bad">Refusée</span>',sub:w.refusal?'<p class="muted">'+esc(w.refusal)+'</p>':''})}).join('');
-  if(ex.length)h+=sec('Déjà échangées')+ex.map(function(w){return wcard(w,{cost:w.cost,chips:w.status==='remis'?'<span class="chip ok">Remise</span>':'<span class="chip gold">À remettre par le tuteur</span>'})}).join('');
-  if(!cat.length&&!req.length&&!ex.length)h+=empty('Rien pour le moment',"Dis ce qui te ferait plaisir. Le tuteur choisira combien de points il faut.");
+  if(req.length)h+=sec(tx('sec.myrequests'))+req.map(function(w){return wcard(w,{chips:w.status==='demande'?'<span class="chip">'+tx('chip.waitprice')+'</span>':'<span class="chip bad">'+tx('chip.declined')+'</span>',sub:w.refusal?'<p class="muted">'+esc(w.refusal)+'</p>':''})}).join('');
+  if(ex.length)h+=sec(tx('sec.alreadyexch'))+ex.map(function(w){return wcard(w,{cost:w.cost,chips:w.status==='remis'?'<span class="chip ok">'+tx('chip.delivered')+'</span>':'<span class="chip gold">'+tx('chip.todeliverg')+'</span>'})}).join('');
+  if(!cat.length&&!req.length&&!ex.length)h+=empty(tx('wish.none.t'),tx('wish.none.d'));
   return h;
 }
 /* ---------- Historique des points : masquer des lignes (affichage seulement) ----------
@@ -674,34 +685,35 @@ var HL={rows:[],sel:{}};
 var hlKey=function(){return 'qf-hid-'+S.fid+'-'+S.pid};
 var hidGet=function(){var o={};try{JSON.parse(LS.get(hlKey())||'[]').forEach(function(i){o[i]=1})}catch(e){}return o};
 var hidSave=function(o){var a=Object.keys(o);if(a.length>1000)a=a.slice(a.length-1000);LS.set(hlKey(),JSON.stringify(a))};
-var histKid=function(l){return '<div class="grow"><b>'+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
-var histJournal=function(l){return av(P(l.kid),'s')+'<div class="grow"><b>'+esc(nameOf(l.kid))+' · '+esc(l.reason||'Points')+'</b><small>'+ago(l.at)+(l.by&&P(l.by)?' · par '+esc(nameOf(l.by)):'')+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
+var reasonText=function(l){var r=l.reason||'';if(r==='Bonus')return tx('reason.bonus');if(r==='Retrait')return tx('reason.withdraw');if(r.indexOf('Bonus : ')===0)return tx('reason.bonusof',{t:r.slice(8)});return r||tx('reason.points')};
+var histKid=function(l){return '<div class="grow"><b>'+esc(reasonText(l))+'</b><small>'+ago(l.at)+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
+var histJournal=function(l){return av(P(l.kid),'s')+'<div class="grow"><b>'+esc(nameOf(l.kid))+' · '+esc(reasonText(l))+'</b><small>'+ago(l.at)+(l.by&&P(l.by)?' · '+tx('by',{name:esc(nameOf(l.by))}):'')+'</small></div><span class="delta '+(l.delta>=0?'pos':'neg')+'">'+(l.delta>=0?'+':'')+l.delta+'</span>'};
 function histBlock(rows,limit,empty,inner){
   var hid=hidGet(),vis=rows.filter(function(l){return !hid[l.id]}),nHid=rows.length-vis.length;
   HL.rows=vis.map(function(l){return l.id});
   var keep={};HL.rows.forEach(function(i){if(HL.sel[i])keep[i]=1});HL.sel=keep;
   var shown=vis.slice(0,limit),n=Object.keys(HL.sel).length,h='';
   if(shown.length){
-    h+='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="hl-all"'+(n&&n===shown.length?' checked':'')+'> Tout</label><span class="muted" id="hl-count">'+(n?n+(n>1?' sélectionnées':' sélectionnée'):'')+'</span><button class="btn ghost sm" id="hl-hide" data-a="hlHide"'+(n?'':' disabled')+'>Masquer</button></div>';
-    h+='<ul class="lst">'+shown.map(function(l){return '<li><input type="checkbox" class="hl-sel" data-id="'+esc(l.id)+'" aria-label="Sélectionner cette ligne"'+(HL.sel[l.id]?' checked':'')+'>'+inner(l)+'</li>'}).join('')+'</ul>';
-    h+='<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="hlHideAll">Tout masquer</button></div>';
-  }else h+=rows.length?'<p class="muted">Tout l\'historique est masqué.</p>':empty;
-  if(nHid)h+='<p class="muted" style="margin-top:8px">'+nHid+' ligne'+(nHid>1?'s':'')+' masquée'+(nHid>1?'s':'')+' sur cet appareil. Les points ne changent pas. <button class="btn ghost sm" data-a="hlShow">Tout réafficher</button></p>';
+    h+='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="hl-all"'+(n&&n===shown.length?' checked':'')+'> '+tx('sel.all')+'</label><span class="muted" id="hl-count">'+(n?tn('sel.count',n):'')+'</span><button class="btn ghost sm" id="hl-hide" data-a="hlHide"'+(n?'':' disabled')+'>'+tx('btn.hide')+'</button></div>';
+    h+='<ul class="lst">'+shown.map(function(l){return '<li><input type="checkbox" class="hl-sel" data-id="'+esc(l.id)+'" aria-label="'+tx('aria.selrow')+'"'+(HL.sel[l.id]?' checked':'')+'>'+inner(l)+'</li>'}).join('')+'</ul>';
+    h+='<div class="acts" style="margin-top:8px"><button class="btn ghost sm" data-a="hlHideAll">'+tx('btn.hideall')+'</button></div>';
+  }else h+=rows.length?'<p class="muted">'+tx('hist.allhidden')+'</p>':empty;
+  if(nHid)h+='<p class="muted" style="margin-top:8px">'+tn('hist.hidden',nHid)+' <button class="btn ghost sm" data-a="hlShow">'+tx('btn.showall')+'</button></p>';
   return h;
 }
 function hlUpdate(){
   var n=Object.keys(HL.sel).length,all=document.querySelectorAll('.hl-sel').length;
   var c=document.getElementById('hl-count'),d=document.getElementById('hl-hide'),a=document.getElementById('hl-all');
-  if(c)c.textContent=n?n+(n>1?' sélectionnées':' sélectionnée'):'';
+  if(c)c.textContent=n?tn('sel.count',n):'';
   if(d)d.disabled=!n;
   if(a)a.checked=n>0&&n===all;
 }
 function vPoints(){
   var m=me(),b=bal(m.id);
   var goals=S.wishes.filter(function(w){return w.status==='accepte'&&(w.for===m.id||w.for==='all')&&w.cost>b}).sort(function(a,c){return a.cost-c.cost});
-  var h='<div class="hero"><span class="coin big">'+ic('star')+'</span><div><small>Mes points</small><div class="n">'+b+'</div></div></div>';
-  if(goals[0])h+='<div class="card" style="margin-top:12px"><span class="lbl">Prochain objectif</span><b>'+esc(goals[0].title)+'</b><progress max="'+goals[0].cost+'" value="'+b+'" aria-label="Progression"></progress><p class="muted">Plus que '+plural(goals[0].cost-b)+'.</p></div>';
-  h+=sec('Historique')+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>',histKid);
+  var h='<div class="hero"><span class="coin big">'+ic('star')+'</span><div><small>'+tx('pts.mine')+'</small><div class="n">'+b+'</div></div></div>';
+  if(goals[0])h+='<div class="card" style="margin-top:12px"><span class="lbl">'+tx('goal.next')+'</span><b>'+esc(goals[0].title)+'</b><progress max="'+goals[0].cost+'" value="'+b+'" aria-label="'+tx('aria.progress')+'"></progress><p class="muted">'+tx('goal.only',{p:plural(goals[0].cost-b)})+'</p></div>';
+  h+=sec(tx('sec.history'))+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">'+tx('hist.empty')+'</p>',histKid);
   return h;
 }
 
@@ -711,38 +723,38 @@ function vChat(){
   if(!cs.some(function(c){return c.id===S.chan}))S.chan=cs[0].id;
   var list=msgsFor(S.chan);
   var pl='<div class="pills" style="margin:6px 0 12px">'+cs.map(function(c){var u=unreadIn(c.id);return '<button class="pill'+(c.id===S.chan?' on':'')+'" data-a="chan" data-v="'+esc(c.id)+'">'+esc(c.label)+(u&&c.id!==S.chan?' ('+u+')':'')+'</button>'}).join('')+'</div>';
-  var body=list.length?list.map(msgHtml).join(''):'<p class="muted" style="text-align:center;padding:24px 0">Aucun message. Écris le premier.</p>';
-  return pl+'<div class="msgs" id="msgs">'+body+'</div><form class="composer" data-submit="sendMsg"><input id="chat-in" type="text" maxlength="500" autocomplete="off" placeholder="Écrire un message…" aria-label="Message"><button class="btn" type="submit" aria-label="Envoyer">'+ic('send')+'</button></form>';
+  var body=list.length?list.map(msgHtml).join(''):'<p class="muted" style="text-align:center;padding:24px 0">'+tx('chat.none')+'</p>';
+  return pl+'<div class="msgs" id="msgs">'+body+'</div><form class="composer" data-submit="sendMsg"><input id="chat-in" type="text" maxlength="500" autocomplete="off" placeholder="'+tx('chat.ph')+'" aria-label="'+tx('chat.aria')+'"><button class="btn" type="submit" aria-label="'+tx('chat.send')+'">'+ic('send')+'</button></form>';
 }
 function vPoints2(){
   var m=me(),b=bal(m.id),tot=earned(m.id),lv=levelOf(tot),st=streakInfo(m.id);
   var goalW=S.wishes.filter(function(w){return w.id===m.goal&&w.status==='accepte'&&(w.for===m.id||w.for==='all')})[0];
   var auto=goalW?null:S.wishes.filter(function(w){return w.status==='accepte'&&(w.for===m.id||w.for==='all')&&w.cost>b}).sort(function(a,c){return a.cost-c.cost})[0];
   var g=goalW||auto;
-  var h='<div class="hero"><span class="coin big">'+ic('star')+'</span><div><small>Mes points</small><div class="n">'+b+'</div>'+(eur(b)?'<small>'+eur(b)+'</small>':'')+'</div></div>';
-  h+='<div class="card" style="margin-top:12px"><span class="lbl">Niveau '+(lv.i+1)+' · '+esc(lv.name)+'</span>'+(lv.next?'<progress max="'+(lv.next-lv.from)+'" value="'+(tot-lv.from)+'" aria-label="Progression du niveau"></progress><p class="muted">Encore '+plural(lv.next-tot)+' gagnés pour devenir '+esc(lv.nextName)+'. Total gagné : '+tot+' pts.</p>':'<p class="muted">Niveau maximum atteint. Total gagné : '+tot+' pts.</p>')+'</div>';
-  h+='<div class="card"><span class="lbl">Série</span><p>'+(st.cur>0?'<b>'+st.cur+' jour'+(st.cur>1?'s':'')+' de suite</b> avec au moins une quête validée.':'Valide une quête aujourd\'hui pour lancer une série.')+'</p><p class="muted">Record : '+st.best+' jour'+(st.best>1?'s':'')+'.</p></div>';
-  if(g)h+='<div class="card"><span class="lbl">'+(goalW?'Mon objectif':'Prochain objectif')+'</span><b>'+esc(g.title)+'</b><progress max="'+g.cost+'" value="'+Math.min(b,g.cost)+'" aria-label="Progression"></progress><p class="muted">'+(b>=g.cost?'Tu as assez de points. Va dans Récompenses pour l\'échanger.':'Plus que '+plural(g.cost-b)+'.')+'</p></div>';
-  h+=chart7(m.id)+boardCard(m)+sec('Badges')+'<div class="badges">'+badgesOf(m.id).map(function(x){return '<div class="bdg'+(x[2]?' on':'')+'"><b>'+esc(x[0])+'</b><small>'+(x[2]?'Obtenu':esc(x[1]))+'</small></div>'}).join('')+'</div>';
-  h+=sec('Historique')+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">Tes points apparaîtront ici dès qu\'une quête sera validée.</p>',histKid);
+  var h='<div class="hero"><span class="coin big">'+ic('star')+'</span><div><small>'+tx('pts.mine')+'</small><div class="n">'+b+'</div>'+(eur(b)?'<small>'+eur(b)+'</small>':'')+'</div></div>';
+  h+='<div class="card" style="margin-top:12px"><span class="lbl">'+tx('level.label',{n:lv.i+1,name:esc(lv.name)})+'</span>'+(lv.next?'<progress max="'+(lv.next-lv.from)+'" value="'+(tot-lv.from)+'" aria-label="'+tx('aria.level')+'"></progress><p class="muted">'+tx('level.next',{p:plural(lv.next-tot),name:esc(lv.nextName),tot:tot})+'</p>':'<p class="muted">'+tx('level.max',{tot:tot})+'</p>')+'</div>';
+  h+='<div class="card"><span class="lbl">'+tx('streak.title')+'</span><p>'+(st.cur>0?'<b>'+tn('streak.days',st.cur)+'</b> '+tx('streak.withquest'):tx('streak.start'))+'</p><p class="muted">'+tx('streak.record',{d:tn('streak.d',st.best)})+'</p></div>';
+  if(g)h+='<div class="card"><span class="lbl">'+(goalW?tx('goal.mine'):tx('goal.next'))+'</span><b>'+esc(g.title)+'</b><progress max="'+g.cost+'" value="'+Math.min(b,g.cost)+'" aria-label="'+tx('aria.progress')+'"></progress><p class="muted">'+(b>=g.cost?tx('goal.enough'):tx('goal.only',{p:plural(g.cost-b)}))+'</p></div>';
+  h+=chart7(m.id)+boardCard(m)+sec(tx('sec.badges'))+'<div class="badges">'+badgesOf(m.id).map(function(x){return '<div class="bdg'+(x[2]?' on':'')+'"><b>'+esc(x[0])+'</b><small>'+(x[2]?tx('badge.got'):esc(x[1]))+'</small></div>'}).join('')+'</div>';
+  h+=sec(tx('sec.history'))+histBlock(S.ledger.filter(function(l){return l.kid===m.id}),30,'<p class="muted">'+tx('hist.empty')+'</p>',histKid);
   return h;
 }
 function vFamilleX(){
   var f=fam(),ks=kids(),h=vFamille();
   var ws=weekStats(),mx=Math.max.apply(null,[1].concat(ws.map(function(x){return x.pts})));
-  h+=sec('Bilan des 7 derniers jours');
-  h+=ks.length?'<div class="card">'+ws.map(function(x){var lv=levelOf(earned(x.kid.id));return '<div class="bil"><div class="bil-h">'+av(x.kid,'s')+'<b>'+esc(x.kid.pseudo)+'</b><span class="muted">Niveau '+(lv.i+1)+' · '+esc(lv.name)+'</span></div><div class="bar"><span style="width:'+Math.round(x.pts/mx*100)+'%"></span></div><small class="muted">'+x.pts+' pts gagnés · '+x.n+' quête'+(x.n>1?'s':'')+' validée'+(x.n>1?'s':'')+'</small></div>'}).join('')+'</div>':'<p class="muted">Ajoute un mineur pour voir son bilan.</p>';
-  h+=sec('Réglages')+'<form class="card" data-submit="setRate"><label class="lbl" for="rate">Valeur d\'un point en euros (facultatif)</label><input id="rate" type="text" inputmode="decimal" value="'+(f.rate>0?String(f.rate).replace('.',','):'')+'" placeholder="0,10"><small class="muted">Affiche un équivalent en euros dans l\'onglet Points du mineur. Laisse vide pour ne rien afficher.</small><button class="btn ghost" type="submit">Enregistrer</button></form>';
+  h+=sec(tx('sec.week'));
+  h+=ks.length?'<div class="card">'+ws.map(function(x){var lv=levelOf(earned(x.kid.id));return '<div class="bil"><div class="bil-h">'+av(x.kid,'s')+'<b>'+esc(x.kid.pseudo)+'</b><span class="muted">'+tx('level.label',{n:lv.i+1,name:esc(lv.name)})+'</span></div><div class="bar"><span style="width:'+Math.round(x.pts/mx*100)+'%"></span></div><small class="muted">'+tn('week.line',x.n,{pts:x.pts})+'</small></div>'}).join('')+'</div>':'<p class="muted">'+tx('week.none')+'</p>';
+  h+=sec(tx('sec.settings'))+'<form class="card" data-submit="setRate"><label class="lbl" for="rate">'+tx('rate.label')+'</label><input id="rate" type="text" inputmode="decimal" value="'+(f.rate>0?dec(f.rate):'')+'" placeholder="'+dec('0.10')+'"><small class="muted">'+tx('rate.hint')+'</small><button class="btn ghost" type="submit">'+tx('btn.save')+'</button></form>';
   h+=settingsX(f);
-  h+=sec('Journal des points')+histBlock(S.ledger,25,'<p class="muted">Aucun mouvement de points pour le moment.</p>',histJournal);
+  h+=sec(tx('sec.journal'))+histBlock(S.ledger,25,'<p class="muted">'+tx('journal.empty')+'</p>',histJournal);
   return h;
 }
-var TABS_T=[['valider','À valider','check'],['quetes','Quêtes','flag'],['recompenses','Récompenses','gift'],['chat','Chat','chat'],['famille','Famille','users']];
-var TABS_K=[['quetes','Quêtes','flag'],['recompenses','Récompenses','gift'],['chat','Chat','chat'],['points','Points','star']];
+var TABS_T=[['valider',tx('tab.approve'),'check'],['quetes',tx('tab.quests'),'flag'],['recompenses',tx('tab.rewards'),'gift'],['chat',tx('tab.chat'),'chat'],['famille',tx('tab.family'),'users']];
+var TABS_K=[['quetes',tx('tab.quests'),'flag'],['recompenses',tx('tab.rewards'),'gift'],['chat',tx('tab.chat'),'chat'],['points',tx('tab.points'),'star']];
 function vApp(){
   var m=me(),t=m.role==='tuteur',un=unread();
-  var head='<header class="top"><button class="who-btn" data-a="menu" aria-label="Menu du profil">'+av(m)+'<span class="t"><b>'+esc(m.pseudo)+'</b><small>'+(t?'Tuteur · '+esc(fam().name||''):(m.age?m.age+' ans':'Mineur'))+'</small></span></button><div class="top-r">'+(t?'':'<span class="bal" aria-label="Mes points">'+coin()+bal(m.id)+'</span>')+'<button class="icon-btn" data-a="bgSheet" aria-label="Arrière-plan de cet onglet">'+ic('palette')+'</button><button class="icon-btn" data-a="notifs" aria-label="Notifications">'+ic('bell')+(un?'<span class="dot">'+(un>9?'9+':un)+'</span>':'')+'</button></div></header>';
-  var banner=S.readonly?'<p class="banner">Lecture seule : ton accès ne permet pas d\'enregistrer de modifications.</p>':(S.slow&&!S.got.people?'<p class="banner">Connexion lente : les données peuvent être incomplètes.</p>':'');
+  var head='<header class="top"><button class="who-btn" data-a="menu" aria-label="'+tx('aria.menu')+'">'+av(m)+'<span class="t"><b>'+esc(m.pseudo)+'</b><small>'+(t?tx('role.tutor')+' · '+esc(fam().name||''):(m.age?tx('age.years',{n:m.age}):tx('role.kid')))+'</small></span></button><div class="top-r">'+(t?'':'<span class="bal" aria-label="'+tx('aria.mypoints')+'">'+coin()+bal(m.id)+'</span>')+'<button class="icon-btn" data-a="bgSheet" aria-label="'+tx('aria.bg')+'">'+ic('palette')+'</button><button class="icon-btn" data-a="notifs" aria-label="Notifications">'+ic('bell')+(un?'<span class="dot">'+(un>9?'9+':un)+'</span>':'')+'</button></div></header>';
+  var banner=S.readonly?'<p class="banner">'+tx('readonly.banner')+'</p>':(S.slow&&!S.got.people?'<p class="banner">'+tx('slow.banner')+'</p>':'');
   var views=t?{valider:vValider,quetes:vQuetesT,recompenses:vRecT,chat:vChat,famille:vFamilleX}:{quetes:vQuetesK,recompenses:vRecK,chat:vChat,points:vPoints2};
   var tabs=t?TABS_T:TABS_K;
   if(!views[S.tab])S.tab=tabs[0][0];
@@ -753,7 +765,7 @@ function vApp(){
     if(!t&&k==='recompenses')return S.wishes.filter(function(w){return w.status==='accepte'&&(w.for===m.id||w.for==='all')&&bal(m.id)>=w.cost}).length;
     return 0;
   };
-  var nav='<nav class="tabs" aria-label="Sections"><div class="tabs-in">'+tabs.map(function(x){var n=badge(x[0]);return '<button class="tab'+(S.tab===x[0]?' on':'')+'" data-a="tab" data-v="'+x[0]+'"'+(S.tab===x[0]?' aria-current="page"':'')+'><span class="w">'+ic(x[2])+(n?'<span class="dot">'+n+'</span>':'')+'</span>'+x[1]+'</button>'}).join('')+'</div></nav>';
+  var nav='<nav class="tabs" aria-label="'+tx('aria.sections')+'"><div class="tabs-in">'+tabs.map(function(x){var n=badge(x[0]);return '<button class="tab'+(S.tab===x[0]?' on':'')+'" data-a="tab" data-v="'+x[0]+'"'+(S.tab===x[0]?' aria-current="page"':'')+'><span class="w">'+ic(x[2])+(n?'<span class="dot">'+n+'</span>':'')+'</span>'+x[1]+'</button>'}).join('')+'</div></nav>';
   return head+banner+'<main>'+noticeBanner()+(S.tab==='quetes'?famGoalCard():'')+views[S.tab]()+'</main>'+nav;
 }
 
@@ -799,30 +811,33 @@ var negOk=0;
 function openSheet(title,html){negOk=0;var s=$('#sheet');s.innerHTML='<div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="sh-head"><h2>'+esc(title)+'</h2><button class="icon-btn sm" data-a="close" aria-label="Fermer">'+ic('x')+'</button></div>'+html+'</div>';s.hidden=false}
 function closeSheet(){var s=$('#sheet');s.hidden=true;s.innerHTML='';S.parentOk=false;S.parentBy=''}
 var pills=function(list,target,def){return '<div class="pills">'+list.map(function(n){return '<button type="button" class="pill'+(n===def?' on':'')+'" data-a="pickpts" data-v="'+n+'" data-target="'+target+'">'+n+'</button>'}).join('')+'</div><input id="'+target+'" type="number" inputmode="numeric" min="1" max="1000" value="'+(def||'')+'" aria-label="Nombre de points">'};
-var kidOptions=function(all){return (all?'<option value="all">Tous les mineurs (le premier qui la fait)</option>':'')+kids().map(function(k){return '<option value="'+esc(k.id)+'">'+esc(k.pseudo)+'</option>'}).join('')};
+var kidOptions=function(all){return (all?'<option value="all">'+tx('opt.allkids.first')+'</option>':'')+kids().map(function(k){return '<option value="'+esc(k.id)+'">'+esc(k.pseudo)+'</option>'}).join('')};
 var isExp=function(q){return q.status==='open'&&q.deadline>0&&Date.now()>q.deadline};
-var fmtDue=function(ms){return new Date(ms).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})};
+var fmtDue=function(ms){return new Date(ms).toLocaleString(LOC,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})};
 var dueLocal=function(ms){if(!ms)return '';var d=new Date(ms),z=function(n){return ('0'+n).slice(-2)};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'T'+z(d.getHours())+':'+z(d.getMinutes())};
-var dueField=function(ms){return '<div class="field"><label for="q-due">Date limite (facultatif)</label><input id="q-due" type="datetime-local" value="'+dueLocal(ms)+'"><small>Passée cette date et cette heure, la quête est annulée et ne rapporte plus de points. Une quête terminée à temps reste valable. Une quête récurrente repart sans date limite.</small><button type="button" class="link" data-a="clearDue" style="padding:4px 0;text-align:left">Retirer la date limite</button></div>'};
-var dueChip=function(q){if(!q.deadline)return '';return isExp(q)?'<span class="chip bad">Expirée</span><span class="chip">'+esc(fmtDue(q.deadline))+'</span>':'<span class="chip gold">'+(soonText(q)||'Avant '+esc(fmtDue(q.deadline)))+'</span>'};
-var editBtn=function(id){return btn(ic('edit')+' Modifier','editQuest',{id:id,cls:'ghost sm'})};
+var dueField=function(ms){return '<div class="field"><label for="q-due">'+tx('due.label')+'</label><input id="q-due" type="datetime-local" value="'+dueLocal(ms)+'"><small>'+tx('due.hint')+'</small><button type="button" class="link" data-a="clearDue" style="padding:4px 0;text-align:left">'+tx('due.clear')+'</button></div>'};
+var dueChip=function(q){if(!q.deadline)return '';return isExp(q)?'<span class="chip bad">'+tx('chip.expired')+'</span><span class="chip">'+esc(fmtDue(q.deadline))+'</span>':'<span class="chip gold">'+(soonText(q)||tx('due.before',{d:esc(fmtDue(q.deadline))}))+'</span>'};
+var editBtn=function(id){return btn(ic('edit')+' '+tx('btn.edit'),'editQuest',{id:id,cls:'ghost sm'})};
 var CATS=['Chambre','Cuisine','Ménage','Devoirs','Jardin','Animaux','Autre'];
-var TPL=[['Ranger sa chambre',20,'Chambre'],['Mettre la table',10,'Cuisine'],['Débarrasser la table',10,'Cuisine'],['Vider le lave-vaisselle',15,'Cuisine'],['Faire ses devoirs',15,'Devoirs'],['Sortir les poubelles',15,'Ménage'],['Passer l\'aspirateur',25,'Ménage'],['Étendre le linge',15,'Ménage'],['Nourrir l\'animal',10,'Animaux'],['Arroser les plantes',10,'Jardin']];
-var LEVELS=[[0,'Recrue'],[50,'Apprenti'],[150,'Aventurier'],[300,'Explorateur'],[600,'Héros'],[1000,'Champion'],[2000,'Légende']];
+var CATK={'Chambre':'bedroom','Cuisine':'kitchen','Ménage':'cleaning','Devoirs':'homework','Jardin':'garden','Animaux':'pets','Autre':'other'};
+var catLabel=function(c){return CATK[c]?tx('cat.'+CATK[c]):c};
+var TPL=[['tpl.room',20,'Chambre'],['tpl.settable',10,'Cuisine'],['tpl.clear',10,'Cuisine'],['tpl.dishwasher',15,'Cuisine'],['tpl.homework',15,'Devoirs'],['tpl.trash',15,'Ménage'],['tpl.vacuum',25,'Ménage'],['tpl.laundry',15,'Ménage'],['tpl.pet',10,'Animaux'],['tpl.plants',10,'Jardin']];
+var LEVELS=[[0,'lv.0'],[50,'lv.1'],[150,'lv.2'],[300,'lv.3'],[600,'lv.4'],[1000,'lv.5'],[2000,'lv.6']];
 var byPrio=function(a,b){return (b.prio?1:0)-(a.prio?1:0)};
-var catChip=function(q){return (q.cat?'<span class="chip">'+esc(q.cat)+'</span>':'')+(q.prio?'<span class="chip gold">Important</span>':'')};
-var catField=function(v){return '<div class="field"><label for="q-cat">Catégorie</label><select id="q-cat"><option value="">Aucune</option>'+CATS.map(function(c){return '<option value="'+c+'"'+(c===v?' selected':'')+'>'+c+'</option>'}).join('')+'</select></div>'};
-var prioField=function(b){return '<label class="check-row"><input id="q-prio" type="checkbox"'+(b?' checked':'')+'> Quête importante (affichée en premier)</label>'};
-var tplRow=function(){return '<div class="field"><span class="lbl">Idées en un geste</span><div class="pills">'+TPL.map(function(t,i){return '<button type="button" class="pill" data-a="tpl" data-v="'+i+'">'+esc(t[0])+'</button>'}).join('')+'</div></div>'};
+var noteRedo=function(q){return q.refusal==='À refaire'?esc(tx('btn.redo')):tx('note.redo',{t:esc(q.refusal)})};
+var catChip=function(q){return (q.cat?'<span class="chip">'+esc(catLabel(q.cat))+'</span>':'')+(q.prio?'<span class="chip gold">'+tx('chip.important')+'</span>':'')};
+var catField=function(v){return '<div class="field"><label for="q-cat">'+tx('field.cat')+'</label><select id="q-cat"><option value="">'+tx('cat.none')+'</option>'+CATS.map(function(c){return '<option value="'+c+'"'+(c===v?' selected':'')+'>'+catLabel(c)+'</option>'}).join('')+'</select></div>'};
+var prioField=function(b){return '<label class="check-row"><input id="q-prio" type="checkbox"'+(b?' checked':'')+'> '+tx('field.prio')+'</label>'};
+var tplRow=function(){return '<div class="field"><span class="lbl">'+tx('tpl.title')+'</span><div class="pills">'+TPL.map(function(t,i){return '<button type="button" class="pill" data-a="tpl" data-v="'+i+'">'+esc(tx(t[0]))+'</button>'}).join('')+'</div></div>'};
 var actorId=function(){return isT()?S.pid:(S.parentBy||'')};
 var earned=function(id){return S.ledger.reduce(function(s,l){return l.kid===id&&l.delta>0&&l.type!=='echange'?s+l.delta:s},0)};
-var levelOf=function(t){var i=0;for(var j=0;j<LEVELS.length;j++)if(t>=LEVELS[j][0])i=j;var nx=LEVELS[i+1];return {i:i,name:LEVELS[i][1],from:LEVELS[i][0],next:nx?nx[0]:0,nextName:nx?nx[1]:''}};
+var levelOf=function(t){var i=0;for(var j=0;j<LEVELS.length;j++)if(t>=LEVELS[j][0])i=j;var nx=LEVELS[i+1];return {i:i,name:tx(LEVELS[i][1]),from:LEVELS[i][0],next:nx?nx[0]:0,nextName:nx?tx(nx[1]):''}};
 var dayIdx=function(ts){var d=new Date(ts);return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5)};
 var streakInfo=function(id){var set={};S.ledger.forEach(function(l){if(l.kid===id&&l.type==='quete')set[dayIdx(l.at)]=1});var days=Object.keys(set).map(Number).sort(function(a,b){return a-b});var best=0,len=0,prev=null;days.forEach(function(d){len=(prev!==null&&d===prev+1)?len+1:1;if(len>best)best=len;prev=d});var t=dayIdx(Date.now()),cur=0,d=set[t]?t:(set[t-1]?t-1:null);while(d!==null&&set[d]){cur++;d--}return {cur:cur,best:best}};
-var badgesOf=function(id){var n=S.ledger.filter(function(l){return l.kid===id&&l.type==='quete'}).length,t=earned(id),b=streakInfo(id).best;return [['Première quête','Valider 1 quête',n>=1],['Bon début','Valider 5 quêtes',n>=5],['Régulier','Valider 20 quêtes',n>=20],['Infatigable','Valider 50 quêtes',n>=50],['Trois jours de suite','Série de 3 jours',b>=3],['Une semaine complète','Série de 7 jours',b>=7],['Cent points','Gagner 100 points',t>=100],['Cinq cents points','Gagner 500 points',t>=500]]};
-var eur=function(p){var r=fam().rate;return r>0?'≈ '+(p*r).toFixed(2).replace('.',',')+' €':''};
+var badgesOf=function(id){var n=S.ledger.filter(function(l){return l.kid===id&&l.type==='quete'}).length,t=earned(id),b=streakInfo(id).best;return [[tx('bd.1'),tx('bd.1d'),n>=1],[tx('bd.2'),tx('bd.2d'),n>=5],[tx('bd.3'),tx('bd.3d'),n>=20],[tx('bd.4'),tx('bd.4d'),n>=50],[tx('bd.5'),tx('bd.5d'),b>=3],[tx('bd.6'),tx('bd.6d'),b>=7],[tx('bd.7'),tx('bd.7d'),t>=100],[tx('bd.8'),tx('bd.8d'),t>=500]]};
+var eur=function(p){var r=fam().rate;return r>0?'≈ '+dec((p*r).toFixed(2))+' €':''};
 var weekStats=function(){var from=Date.now()-7*864e5;return kids().map(function(k){var pts=0,n=0;S.ledger.forEach(function(l){if(l.kid===k.id&&l.at>=from&&l.delta>0&&l.type!=='echange'){pts+=l.delta;if(l.type==='quete')n++}});return {kid:k,pts:pts,n:n}})};
-var chans=function(){var m=me();if(!m)return [];return m.role==='tuteur'?[{id:'family',label:'Famille'}].concat(kids().map(function(k){return {id:k.id,label:'Avec '+k.pseudo}})):[{id:'family',label:'Famille'},{id:m.id,label:'Avec les parents'}]};
+var chans=function(){var m=me();if(!m)return [];return m.role==='tuteur'?[{id:'family',label:tx('tab.family')}].concat(kids().map(function(k){return {id:k.id,label:tx('chan.with',{name:k.pseudo})}})):[{id:'family',label:tx('tab.family')},{id:m.id,label:tx('chan.parents')}]};
 var msgsFor=function(ch){return S.messages.filter(function(x){return x.ch===ch}).slice().reverse()};
 var unreadIn=function(ch){var m=me();if(!m)return 0;var seen=(m.chatSeen&&m.chatSeen[ch])||0;return S.messages.filter(function(x){return x.ch===ch&&x.from!==S.pid&&x.at>seen}).length};
 var unreadChat=function(){return chans().reduce(function(s,c){return s+unreadIn(c.id)},0)};
@@ -830,14 +845,14 @@ var lastSeenWrite=0,seenT=0;
 function markChatSeen(){var m=me();if(!m||S.readonly||!db)return;var now=Date.now();
   if(now-lastSeenWrite<3000){if(!seenT)seenT=setTimeout(function(){seenT=0;if(S.step==='app'&&S.tab==='chat'&&unreadIn(S.chan)>0)markChatSeen()},3100);return}
   lastSeenWrite=now;var o={};o['chatSeen.'+S.chan]=now;dref('people',m.id).update(o).catch(function(){})}
-var msgHtml=function(x){var mine=x.from===S.pid,p=P(x.from);return '<div class="msg'+(mine?' me':'')+'"><div class="b"><div class="who">'+(mine?'Moi':esc(p?p.pseudo:'?'))+' · '+ago(x.at)+'</div><div class="t">'+esc(x.text)+'</div></div>'+(isT()?'<button class="mx" data-a="delMsg" data-id="'+esc(x.id)+'" aria-label="Supprimer le message">'+ic('x')+'</button>':'')+'</div>'};
-var ppTop=function(){var m=me();return '<div class="hero sm"><span class="coin big">'+ic('star')+'</span><div><small>'+esc(m.pseudo)+' · par '+esc(nameOf(S.parentBy))+'</small><div class="n">'+bal(m.id)+'</div></div></div>'};
+var msgHtml=function(x){var mine=x.from===S.pid,p=P(x.from);return '<div class="msg'+(mine?' me':'')+'"><div class="b"><div class="who">'+(mine?tx('chat.me'):esc(p?p.pseudo:'?'))+' · '+ago(x.at)+'</div><div class="t">'+esc(x.text)+'</div></div>'+(isT()?'<button class="mx" data-a="delMsg" data-id="'+esc(x.id)+'" aria-label="'+tx('aria.delmsg')+'">'+ic('x')+'</button>':'')+'</div>'};
+var ppTop=function(){var m=me();return '<div class="hero sm"><span class="coin big">'+ic('star')+'</span><div><small>'+esc(m.pseudo)+' · '+tx('by',{name:esc(nameOf(S.parentBy))})+'</small><div class="n">'+bal(m.id)+'</div></div></div>'};
 var ppLists=function(){var m=me();
   var pend=S.quests.filter(function(q){return q.status==='a_valider'&&q.doneBy===m.id});
   var ex=S.wishes.filter(function(w){return w.status==='echange'&&w.redeemedBy===m.id});
-  return (pend.length?'<h3 class="sub">Quêtes à valider</h3>'+pend.map(function(q){return tk(q,{chips:catChip(q),note:q.doneNote?'<p class="muted">« '+esc(q.doneNote)+' »</p>':'',acts:btn('Valider','validate',{id:q.id,cls:'ok'})})}).join(''):'')+(ex.length?'<h3 class="sub">Récompenses à remettre</h3>'+ex.map(function(w){return wcard(w,{cost:w.cost,acts:btn('Marquer comme remis','deliver',{id:w.id,cls:'ok'})})}).join(''):'')};
+  return (pend.length?'<h3 class="sub">'+tx('sec.questsapprove')+'</h3>'+pend.map(function(q){return tk(q,{chips:catChip(q),note:q.doneNote?'<p class="muted">'+tx('quote',{t:esc(q.doneNote)})+'</p>':'',acts:btn(tx('btn.approve'),'validate',{id:q.id,cls:'ok'})})}).join(''):'')+(ex.length?'<h3 class="sub">'+tx('sec.rewardsdeliver')+'</h3>'+ex.map(function(w){return wcard(w,{cost:w.cost,acts:btn(tx('btn.deliver'),'deliver',{id:w.id,cls:'ok'})})}).join(''):'')};
 function refreshParent(){if(!S.parentOk)return;var a=document.getElementById('pp-top'),b=document.getElementById('pp-lists');if(a&&b){a.innerHTML=ppTop();b.innerHTML=ppLists()}}
-var TABLABEL={valider:'À valider',quetes:'Quêtes',recompenses:'Récompenses',chat:'Chat',famille:'Famille',points:'Points'};
+var TABLABEL={valider:tx('tab.approve'),quetes:tx('tab.quests'),recompenses:tx('tab.rewards'),chat:tx('tab.chat'),famille:tx('tab.family'),points:tx('tab.points')};
 var ALLTABS=['valider','quetes','recompenses','chat','famille','points'];
 var PRESETS=[
  {id:'ciel',name:'Ciel',css:'linear-gradient(160deg,#8EC5FC 0%,#E0C3FC 100%)'},
@@ -875,7 +890,7 @@ function startPrefs(){
 function bgSet(obj){
   var tab=S.tab,cur=S.bgs[tab]||{};
   obj.veil=cur.veil==null?55:cur.veil;S.bgs[tab]=obj;applyBg();
-  return run(function(){return db.doc('families/'+S.fid+'/prefs/'+S.pid+'_'+tab).set(obj)},'Arrière-plan enregistré');
+  return run(function(){return db.doc('families/'+S.fid+'/prefs/'+S.pid+'_'+tab).set(obj)},tx('toast.bgsaved'));
 }
 function bgVeil(v,save){
   var tab=S.tab,cur=S.bgs[tab];if(!cur||!validBg(cur))return;
@@ -883,66 +898,66 @@ function bgVeil(v,save){
   if(save)return run(function(){return db.doc('families/'+S.fid+'/prefs/'+S.pid+'_'+tab).set(cur)});
 }
 function avFile(file){
-  if(!/^image\//.test(file.type)){setErr('Choisis une image.');return}
+  if(!/^image\//.test(file.type)){setErr(tx('err.image'));return}
   var url=URL.createObjectURL(file),img=new Image(),m=me();
   img.onload=function(){
     var side=Math.min(img.width,img.height),sx=(img.width-side)/2,sy=(img.height-side)/2,c=document.createElement('canvas');
     c.width=c.height=144;c.getContext('2d').drawImage(img,sx,sy,side,side,0,0,144,144);URL.revokeObjectURL(url);
     var q=.8,d=c.toDataURL('image/jpeg',q);
     while(d.length>30000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}
-    if(!okPhoto(d)){setErr('Image impossible à utiliser.');return}
-    run(function(){return dref('people',m.id).update({photo:d})},'Photo enregistrée').then(function(ok){if(ok)closeSheet()});
+    if(!okPhoto(d)){setErr(tx('err.imgunusable'));return}
+    run(function(){return dref('people',m.id).update({photo:d})},tx('toast.photosaved')).then(function(ok){if(ok)closeSheet()});
   };
-  img.onerror=function(){URL.revokeObjectURL(url);setErr('Impossible de lire cette image.')};
+  img.onerror=function(){URL.revokeObjectURL(url);setErr(tx('err.imgread'))};
   img.src=url;
 }
 function bgFile(file){
-  if(!/^image\//.test(file.type)){toast('Choisis une image.',true);return}
+  if(!/^image\//.test(file.type)){toast(tx('err.image'),true);return}
   var url=URL.createObjectURL(file),img=new Image();
   img.onload=function(){
     var max=720,sc=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*sc)),h=Math.max(1,Math.round(img.height*sc));
     var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);
     var q=.72,d=c.toDataURL('image/jpeg',q);
     while(d.length>200000&&q>.3){q-=.08;d=c.toDataURL('image/jpeg',q)}
-    if(d.length>200000){toast('Image trop lourde. Choisis-en une plus simple.',true);return}
+    if(d.length>200000){toast(tx('err.imgheavy'),true);return}
     bgSet({t:'img',v:d});
   };
-  img.onerror=function(){URL.revokeObjectURL(url);toast('Impossible de lire cette image.',true)};
+  img.onerror=function(){URL.revokeObjectURL(url);toast(tx('err.imgread'),true)};
   img.src=url;
 }
-var soonText=function(q){var r=q.deadline-Date.now();if(q.status!=='open'||r<=0||r>=864e5)return '';var h=Math.floor(r/36e5),m=Math.floor(r%36e5/6e4);return 'Dans '+(h?h+' h ':'')+m+' min'};
+var soonText=function(q){var r=q.deadline-Date.now();if(q.status!=='open'||r<=0||r>=864e5)return '';var h=Math.floor(r/36e5),m=Math.floor(r%36e5/6e4);return tx('due.in',{t:(h?h+' h ':'')+m+' min'})};
 var parseSteps=function(text,old){
   var done={};(old||[]).forEach(function(x){done[x.t]=!!x.d});
   return String(text||'').split('\n').map(function(l){return l.trim().slice(0,60)}).filter(Boolean).slice(0,8).map(function(t){return {t:t,d:!!done[t]}});
 };
-var stepsField=function(q){return '<div class="field"><label for="q-steps">Étapes (une par ligne, facultatif)</label><textarea id="q-steps" maxlength="500" placeholder="Faire le lit&#10;Ranger le bureau&#10;Vider la corbeille">'+esc(((q&&q.steps)||[]).map(function(x){return x.t}).join('\n'))+'</textarea><small>Le mineur coche chaque étape avant de pouvoir terminer la quête.</small></div>'};
+var stepsField=function(q){return '<div class="field"><label for="q-steps">'+tx('steps.label')+'</label><textarea id="q-steps" maxlength="500" placeholder="'+tx('steps.ph').split('¦').join('&#10;')+'">'+esc(((q&&q.steps)||[]).map(function(x){return x.t}).join('\n'))+'</textarea><small>'+tx('steps.hint')+'</small></div>'};
 var stepsHtml=function(q,live){
   var n=q.steps.filter(function(x){return x.d}).length;
-  return '<ul class="steps" aria-label="Étapes">'+q.steps.map(function(x,i){
+  return '<ul class="steps" aria-label="'+tx('aria.steps')+'">'+q.steps.map(function(x,i){
     var inner='<span class="box"></span> '+esc(x.t);
     return '<li>'+(live&&q.status==='open'?'<button type="button" class="stp'+(x.d?' on':'')+'" data-a="step" data-id="'+esc(q.id)+'" data-v="'+i+'" aria-pressed="'+(x.d?'true':'false')+'">'+inner+'</button>':'<span class="stp ro'+(x.d?' on':'')+'">'+inner+'</span>')+'</li>';
-  }).join('')+'</ul><small class="muted">'+n+' / '+q.steps.length+' étapes</small>';
+  }).join('')+'</ul><small class="muted">'+tx('steps.count',{n:n,t:q.steps.length})+'</small>';
 };
 var famGoalProgress=function(f){var g=f.famGoal;if(!g)return 0;return S.ledger.reduce(function(sum,l){return l.at>=g.since&&l.delta>0&&l.type!=='echange'?sum+l.delta:sum},0)};
-var famGoalCard=function(){var f=fam(),g=f.famGoal;if(!g)return '';var pr=famGoalProgress(f),ok=pr>=g.target;return '<div class="card"><span class="lbl">Défi de famille</span><b>'+esc(g.title)+'</b><progress max="'+g.target+'" value="'+Math.min(pr,g.target)+'" aria-label="Progression du défi"></progress><p class="muted">'+(ok?'Objectif atteint. Bravo à toute la famille.':pr+' / '+g.target+' pts. Chaque quête validée compte.')+'</p></div>'};
-var noticeBanner=function(){var n=fam().notice;return n&&n.text?'<div class="notice"><b>Annonce</b> · '+esc(n.text)+'</div>':''};
+var famGoalCard=function(){var f=fam(),g=f.famGoal;if(!g)return '';var pr=famGoalProgress(f),ok=pr>=g.target;return '<div class="card"><span class="lbl">'+tx('fg.title')+'</span><b>'+esc(g.title)+'</b><progress max="'+g.target+'" value="'+Math.min(pr,g.target)+'" aria-label="'+tx('aria.fg')+'"></progress><p class="muted">'+(ok?tx('fg.done'):tx('fg.progress',{pr:pr,t:g.target}))+'</p></div>'};
+var noticeBanner=function(){var n=fam().notice;return n&&n.text?'<div class="notice"><b>'+tx('notice.label')+'</b> · '+esc(n.text)+'</div>':''};
 var chart7=function(id){
   var today=dayIdx(Date.now()),vals=[],labels=[];
-  for(var i=6;i>=0;i--){vals.push(0);labels.push(new Date(Date.now()-i*864e5).toLocaleDateString('fr-FR',{weekday:'narrow'}))}
+  for(var i=6;i>=0;i--){vals.push(0);labels.push(new Date(Date.now()-i*864e5).toLocaleDateString(LOC,{weekday:'narrow'}))}
   S.ledger.forEach(function(l){if(l.kid===id&&l.delta>0&&l.type!=='echange'){var k=6-(today-dayIdx(l.at));if(k>=0&&k<=6)vals[k]+=l.delta}});
   var mx=Math.max.apply(null,[1].concat(vals));
-  return '<div class="card"><span class="lbl">Points gagnés, 7 derniers jours</span><div class="chart">'+vals.map(function(v,k){return '<div class="col"><small>'+(v||'')+'</small><div class="cb" style="height:'+(v?Math.round(v/mx*72)+6:3)+'px'+(v?'':';opacity:.35')+'"></div><small>'+esc(labels[k])+'</small></div>'}).join('')+'</div></div>';
+  return '<div class="card"><span class="lbl">'+tx('chart.title')+'</span><div class="chart">'+vals.map(function(v,k){return '<div class="col"><small>'+(v||'')+'</small><div class="cb" style="height:'+(v?Math.round(v/mx*72)+6:3)+'px'+(v?'':';opacity:.35')+'"></div><small>'+esc(labels[k])+'</small></div>'}).join('')+'</div></div>';
 };
 var boardCard=function(m){
   if(!fam().board||kids().length<2)return '';
   var ws=weekStats().sort(function(a,b){return b.pts-a.pts});
-  return '<div class="card"><span class="lbl">Classement de la semaine</span><ol class="rank">'+ws.map(function(x,i){return '<li class="'+(x.kid.id===m.id?'me':'')+'">'+(i+1)+'. '+av(x.kid,'s')+' '+esc(x.kid.pseudo)+'<b>'+x.pts+' pts</b></li>'}).join('')+'</ol></div>';
+  return '<div class="card"><span class="lbl">'+tx('board.title')+'</span><ol class="rank">'+ws.map(function(x,i){return '<li class="'+(x.kid.id===m.id?'me':'')+'">'+(i+1)+'. '+av(x.kid,'s')+' '+esc(x.kid.pseudo)+'<b>'+x.pts+' pts</b></li>'}).join('')+'</ol></div>';
 };
 var settingsX=function(f){
   var gl=f.famGoal;
-  return '<form class="card" data-submit="setNotice"><label class="lbl" for="notice">Annonce pour la famille</label><input id="notice" type="text" maxlength="140" value="'+esc((f.notice&&f.notice.text)||'')+'" placeholder="Samedi : grand ménage à 10 h"><small class="muted">Affichée en haut de chaque onglet. Laisse vide pour la retirer.</small><button class="btn ghost" type="submit">Publier</button></form>'+
-  '<form class="card" data-submit="setFamGoal"><label class="lbl" for="fg-title">Défi de famille</label>'+(gl?'<p class="muted">En cours : « '+esc(gl.title)+' » ('+famGoalProgress(f)+' / '+gl.target+' pts)</p>':'<p class="muted">Un objectif commun : tous les points gagnés par les mineurs comptent.</p>')+'<input id="fg-title" type="text" maxlength="60" placeholder="Une sortie en famille"><input id="fg-target" type="number" inputmode="numeric" min="10" max="10000" placeholder="Points à atteindre, par exemple 300"><button class="btn ghost" type="submit">'+(gl?'Remplacer le défi':'Lancer le défi')+'</button>'+(gl?'<button class="btn bad" type="button" data-a="clearFamGoal">Terminer le défi</button>':'')+'</form>'+
-  '<div class="card"><label class="check-row" style="margin:0"><input id="board" type="checkbox"'+(f.board?' checked':'')+' data-a="toggleBoard"> Afficher le classement de la semaine aux mineurs</label><small class="muted">Peut créer de la rivalité entre frères et sœurs. Désactivé par défaut.</small></div>';
+  return '<form class="card" data-submit="setNotice"><label class="lbl" for="notice">'+tx('notice.field')+'</label><input id="notice" type="text" maxlength="140" value="'+esc((f.notice&&f.notice.text)||'')+'" placeholder="'+tx('notice.ph')+'"><small class="muted">'+tx('notice.hint')+'</small><button class="btn ghost" type="submit">'+tx('btn.publish')+'</button></form>'+
+  '<form class="card" data-submit="setFamGoal"><label class="lbl" for="fg-title">'+tx('fg.title')+'</label>'+(gl?'<p class="muted">'+tx('fg.running',{t:esc(gl.title),pr:famGoalProgress(f),g:gl.target})+'</p>':'<p class="muted">'+tx('fg.explain')+'</p>')+'<input id="fg-title" type="text" maxlength="60" placeholder="'+tx('fg.ph1')+'"><input id="fg-target" type="number" inputmode="numeric" min="10" max="10000" placeholder="'+tx('fg.ph2')+'"><button class="btn ghost" type="submit">'+(gl?tx('fg.replace'):tx('fg.launch'))+'</button>'+(gl?'<button class="btn bad" type="button" data-a="clearFamGoal">'+tx('fg.end')+'</button>':'')+'</form>'+
+  '<div class="card"><label class="check-row" style="margin:0"><input id="board" type="checkbox"'+(f.board?' checked':'')+' data-a="toggleBoard"> '+tx('board.show')+'</label><small class="muted">'+tx('board.hint')+'</small></div>';
 };
 var phoneClean=function(v){var c=String(v||'').replace(/[\s.\-()]/g,'');return /^\+?\d{8,15}$/.test(c)?c:null};
 var phoneShow=function(c){c=String(c||'');if(/^0\d{9}$/.test(c))return c.replace(/(\d{2})(?=\d)/g,'$1 ').trim();return c};
@@ -967,9 +982,9 @@ var A={
  lmode:function(el){S.lmode=el.dataset.v;S.lk=null;S.lkSel='';render()},
  kidCode:function(){
    var code=cleanCode(val('l-code'));
-   if(code.length<4)return setErr('Saisis le code famille.');
+   if(code.length<4)return setErr(tx('err.entercode'));
    return lookupKids(code).then(function(r){
-     if(!r)return setErr('Code famille introuvable.');
+     if(!r)return setErr(tx('err.codenotfound'));
      S.lk={code:code,kids:r.kids};S.lkSel=r.kids.length===1?r.kids[0]:'';LS.set('qf-code',code);render();
    },authFail);
  },
@@ -983,72 +998,73 @@ var A={
    var kid=S.lmode==='kid',pass=document.getElementById('l-pass').value,p;
    if(kid){
      var lk=S.lk;
-     if(!lk)return setErr("Saisis d'abord le code famille.");
+     if(!lk)return setErr(tx('err.codefirst'));
      var code=lk.code,pseudo=lk.kids.length?S.lkSel:val('l-pseudo');
-     if(!pseudo)return setErr('Choisis ton prénom dans la liste.');
-     if(!pass)return setErr('Saisis ton mot de passe.');
+     if(!pseudo)return setErr(tx('err.pickname'));
+     if(!pass)return setErr(tx('err.enterpass'));
      p=kidEmail(code,pseudo).then(function(em){LS.set('qf-code',code);return window.QFB.signIn(em,pass)});
    }else{
      var mail=val('l-email').toLowerCase();
-     if(!okMail(mail)||!pass)return setErr('Saisis ton adresse e-mail et ton mot de passe.');
+     if(!okMail(mail)||!pass)return setErr(tx('err.mailpass'));
      p=window.QFB.signIn(mail,pass);
    }
    return p.catch(authFail);
  },
  forgot:function(){
    var mail=val('l-email').toLowerCase();
-   if(!okMail(mail))return setErr("Saisis d'abord ton adresse e-mail ci-dessus.");
-   return window.QFB.resetEmail(mail).then(function(){toast('Si ce compte existe, un e-mail de réinitialisation vient d\'être envoyé.')},authFail);
+   if(!okMail(mail))return setErr(tx('err.mailfirst'));
+   return window.QFB.resetEmail(mail).then(function(){toast(tx('toast.resetsent'))},authFail);
  },
  passSheet:function(){
-   openSheet('Changer le mot de passe','<form data-submit="setPass"><div class="field"><label for="s-pass">Nouveau mot de passe</label><input id="s-pass" type="password" autocomplete="new-password"><small>6 caractères minimum.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer</button></form>');
+   openSheet(tx('sheet.changepass'),'<form data-submit="setPass"><div class="field"><label for="s-pass">'+tx('field.newpass')+'</label><input id="s-pass" type="password" autocomplete="new-password"><small>'+tx('field.password.hint')+'</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.save')+'</button></form>');
  },
  mailSheet:function(){
-   openSheet('Changer mon adresse e-mail','<form data-submit="setMail"><p class="muted">Adresse actuelle : <b>'+esc(window.QFB.email())+'</b></p><div class="field"><label for="m-new">Nouvelle adresse e-mail</label><input id="m-new" type="email" autocomplete="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="m-pass">Mot de passe actuel</label><input id="m-pass" type="password" autocomplete="current-password"><small>Par sécurité, on vérifie que c\'est bien toi.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Envoyer le lien de confirmation</button></form>');
+   openSheet(tx('menu.changemail'),'<form data-submit="setMail"><p class="muted">'+tx('mail.current')+' <b>'+esc(window.QFB.email())+'</b></p><div class="field"><label for="m-new">'+tx('mail.new')+'</label><input id="m-new" type="email" autocomplete="off" autocapitalize="off" spellcheck="false"></div><div class="field"><label for="m-pass">'+tx('field.curpass')+'</label><input id="m-pass" type="password" autocomplete="current-password"><small>'+tx('mail.secure')+'</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('mail.send')+'</button></form>');
  },
  setMail:function(){
    var n=val('m-new').toLowerCase(),pw=document.getElementById('m-pass').value;
-   if(!okMail(n))return setErr('Adresse e-mail invalide.');
-   if(n===String(window.QFB.email()).toLowerCase())return setErr("C'est déjà ton adresse actuelle.");
-   if(!pw)return setErr('Saisis ton mot de passe actuel.');
-   return run(function(){return window.QFB.changeEmail(n,pw)},'Lien envoyé. Ouvre ta nouvelle boîte mail et clique sur le lien pour confirmer.').then(function(ok){if(ok)closeSheet()});
+   if(!okMail(n))return setErr(tx('err.email'));
+   if(n===String(window.QFB.email()).toLowerCase())return setErr(tx('err.samemail'));
+   if(!pw)return setErr(tx('err.curpass'));
+   return run(function(){return window.QFB.changeEmail(n,pw)},tx('toast.linksent')).then(function(ok){if(ok)closeSheet()});
  },
  setPass:function(){
    var pass=document.getElementById('s-pass').value;
-   if(pass.length<6)return setErr('Le mot de passe doit contenir au moins 6 caractères.');
-   return run(function(){return window.QFB.setPassword(pass)},'Mot de passe enregistré').then(function(ok){if(ok)closeSheet()});
+   if(pass.length<6)return setErr(tx('err.pass6'));
+   return run(function(){return window.QFB.setPassword(pass)},tx('toast.passsaved')).then(function(ok){if(ok)closeSheet()});
  },
  phoneSheet:function(){
    var m=me();
-   openSheet('Mon numéro de téléphone','<form data-submit="setPhone"><div class="field"><label for="ph">Numéro de téléphone</label><input id="ph" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="06 12 34 56 78" value="'+esc(phoneShow(m.phone||''))+'"><small>Facultatif. Les membres de la famille peuvent voir ce numéro. Aucun SMS n\'est envoyé : le numéro est seulement enregistré.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer</button></form>');
+   openSheet(tx('phone.title'),'<form data-submit="setPhone"><div class="field"><label for="ph">'+tx('phone.label')+'</label><input id="ph" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="06 12 34 56 78" value="'+esc(phoneShow(m.phone||''))+'"><small>'+tx('phone.hint')+'</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.save')+'</button></form>');
  },
  setPhone:function(){
    var m=me(),v=val('ph'),c=v?phoneClean(v):'';
-   if(v&&!c)return setErr('Numéro invalide. Saisis 8 à 15 chiffres, avec un + si tu écris l\'indicatif.');
-   return run(function(){return dref('people',m.id).update({phone:c})},v?'Numéro enregistré':'Numéro supprimé').then(function(ok){if(ok)closeSheet()});
+   if(v&&!c)return setErr(tx('err.phone'));
+   return run(function(){return dref('people',m.id).update({phone:c})},v?tx('toast.phonesaved'):tx('toast.phonedeleted')).then(function(ok){if(ok)closeSheet()});
  },
  close:closeSheet,
+ lang:function(){LS.set('qf-lang',LANG==='fr'?'en':'fr');location.reload()},
  ntToggle:function(){
-   if(!ntSupported()){closeSheet();toast("Notifications indisponibles ici. Sur iPhone : ajoute d'abord l'app à l'écran d'accueil.",true);return}
+   if(!ntSupported()){closeSheet();toast(tx('nt.unavailable'),true);return}
    var st=Notification.permission;
-   if(st==='denied'){closeSheet();toast("Notifications bloquées : autorise-les dans les réglages du navigateur.",true);return}
-   if(st==='granted'){var on=LS.get('qf-nt')!=='off';LS.set('qf-nt',on?'off':'on');closeSheet();if(on)pushOff();else pushSync(true);toast(on?'Notifications désactivées':'Notifications activées');return}
-   var fired=0,done=function(r){if(fired)return;fired=1;closeSheet();if(r==='granted'){LS.set('qf-nt','on');pushSync(true);ntShow('Notifications activées','Tu seras prévenu des nouveautés de ta famille.','nt-test');toast('Notifications activées')}else toast('Notifications refusées.',true)};
+   if(st==='denied'){closeSheet();toast(tx('nt.blocked'),true);return}
+   if(st==='granted'){var on=LS.get('qf-nt')!=='off';LS.set('qf-nt',on?'off':'on');closeSheet();if(on)pushOff();else pushSync(true);toast(on?tx('nt.isoff'):tx('nt.ison'));return}
+   var fired=0,done=function(r){if(fired)return;fired=1;closeSheet();if(r==='granted'){LS.set('qf-nt','on');pushSync(true);ntShow(tx('nt.ison'),tx('nt.testbody'),'nt-test');toast(tx('nt.ison'))}else toast(tx('nt.declined'),true)};
    var pr=Notification.requestPermission(done);if(pr&&pr.then)pr.then(done);
  },
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
  menu:function(){
-   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">Me déconnecter</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?'Changer ma photo de profil':'Ajouter ma photo de profil')+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">Changer le code tuteur</button>':'')+'<button class="btn ghost block" data-a="colorSheet">Ma couleur</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">Changer mon mot de passe</button><button class="btn ghost block" data-a="mailSheet">Changer mon adresse e-mail</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?'Modifier mon numéro de téléphone':'Ajouter mon numéro de téléphone')+'</button></div>');
+   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">'+tx('menu.signout')+'</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?tx('menu.photochange'):tx('menu.photoadd'))+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">'+tx('menu.pin')+'</button>':'')+'<button class="btn ghost block" data-a="colorSheet">'+tx('menu.color')+'</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">'+tx('menu.changepass')+'</button><button class="btn ghost block" data-a="mailSheet">'+tx('menu.changemail')+'</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?tx('menu.phoneedit'):tx('menu.phoneadd'))+'</button><button class="btn ghost block" data-a="lang">'+tx('lang.other')+'</button></div>');
  },
  'switch':function(){closeSheet();signOutAll();render()},
  leave:function(){closeSheet();signOutAll();render()},
 
  createFam:function(){
    var name=val('f-name'),pseudo=val('f-pseudo'),mail=val('f-email').toLowerCase(),pass=document.getElementById('f-pass').value,pin=val('f-pin');
-   if(!name||!pseudo)return setErr('Renseigne le nom de la famille et ton pseudo.');
-   if(!okMail(mail))return setErr('Adresse e-mail invalide.');
-   if(pass.length<6)return setErr('Le mot de passe doit contenir au moins 6 caractères.');
-   if(!okTutorCode(pin))return setErr('Le code tuteur doit contenir 8 à 12 lettres ou chiffres.');
+   if(!name||!pseudo)return setErr(tx('err.famname'));
+   if(!okMail(mail))return setErr(tx('err.email'));
+   if(pass.length<6)return setErr(tx('err.pass6'));
+   if(!okTutorCode(pin))return setErr(tx('err.pincode'));
    var fid='f'+rid(),code=genCode(),uid=null;S.busy=true;
    function claim(n){
      return db.doc('codes/'+code).set({fid:fid,kids:[]}).catch(function(e){
@@ -1069,29 +1085,29 @@ var A={
  },
  joinTutor:function(){
    var code=cleanCode(val('j-code')),pseudo=val('j-pseudo'),mail=val('j-email').toLowerCase(),pass=document.getElementById('j-pass').value,pin=val('j-pin');
-   if(code.length<4||!pseudo||!pin)return setErr('Renseigne le code famille, ton pseudo et le code tuteur.');
-   if(!okMail(mail))return setErr('Adresse e-mail invalide.');
-   if(pass.length<6)return setErr('Le mot de passe doit contenir au moins 6 caractères.');
+   if(code.length<4||!pseudo||!pin)return setErr(tx('err.joinfields'));
+   if(!okMail(mail))return setErr(tx('err.email'));
+   if(pass.length<6)return setErr(tx('err.pass6'));
    var uid=null,fid=null;S.busy=true;
    return window.QFB.register(mail,pass).then(function(u){uid=u;S.uid=u;S.pid=u;return lookup(code)}).then(function(f){
-     if(!f)fail('Code famille introuvable.');
+     if(!f)fail(tx('err.codenotfound'));
      fid=f;
      return db.doc('families/'+fid+'/joinRequests/'+uid).set({pin:pin});
    }).then(function(){
      return db.doc('families/'+fid+'/people/'+uid).set({role:'tuteur',pseudo:pseudo,age:null,hue:1,createdAt:Date.now(),seenAt:Date.now()}).catch(function(e){
-       if(e&&e.code==='permission-denied')fail('Code tuteur incorrect.');throw e});
+       if(e&&e.code==='permission-denied')fail(tx('err.pinwrong'));throw e});
    }).then(function(){return db.doc('families/'+fid+'/joinRequests/'+uid).delete().catch(function(){})})
    .then(function(){return db.doc('users/'+uid).set({fid:fid,role:'tuteur'})})
    .then(function(){S.busy=false;startFamily(fid,'tuteur');enter(uid,'tuteur')})
    .catch(function(e){S.busy=false;S.uid=null;S.pid=null;var p=uid?window.QFB.dropCurrent().catch(function(){}):Promise.resolve();return p.then(function(){authFail(e)})});
  },
- newKidSheet:function(){openSheet('Nouveau mineur',newKidForm(false))},
+ newKidSheet:function(){openSheet(tx('kid.new'),newKidForm(false))},
  newKid:function(f){
    var pseudo=val('n-pseudo'),age=numOf('n-age'),pass=document.getElementById('n-pass').value;
-   if(!pseudo)return setErr('Choisis un pseudo.');
-   if(pass.length<6)return setErr('Le mot de passe doit contenir au moins 6 caractères.');
-   if(!(age>=3&&age<=17))return setErr("L'âge doit être compris entre 3 et 17 ans.");
-   if(kids().some(function(k){return normLogin(k.login||k.pseudo)===normLogin(pseudo)}))return setErr('Ce pseudo existe déjà dans la famille.');
+   if(!pseudo)return setErr(tx('err.choosepseudo'));
+   if(pass.length<6)return setErr(tx('err.pass6'));
+   if(!(age>=3&&age<=17))return setErr(tx('err.age'));
+   if(kids().some(function(k){return normLogin(k.login||k.pseudo)===normLogin(pseudo)}))return setErr(tx('err.pseudoexists'));
    var fid=S.fid;
    return run(function(){
      return kidEmail(fam().code,pseudo).then(function(em){return window.QFB.registerOther(em,pass)}).then(function(uid){
@@ -1099,30 +1115,30 @@ var A={
         .then(function(){return db.doc('families/'+fid+'/private/kid_'+uid).set({pw:pass})})
         .then(function(){return db.doc('users/'+uid).set({fid:fid,role:'mineur'})})
         .then(function(){return db.doc('codes/'+fam().code).update({kids:kids().map(function(k){return k.pseudo}).filter(function(n){return normLogin(n)!==normLogin(pseudo)}).concat([pseudo])})})
-        .then(function(){return notify('tuteurs',pseudo+' a rejoint la famille.','info')});
+        .then(function(){return notify('tuteurs',tx('n.joined',{name:pseudo}),'info')});
      });
-   },pseudo+' ajouté').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.kidadded',{name:pseudo})).then(function(ok){if(ok)closeSheet()});
  },
  kidPwShow:function(el){
    var k=P(el.dataset.id);if(!k)return;
    return db.doc('families/'+S.fid+'/private/kid_'+k.id).get().then(function(s){
-     var o=document.getElementById('k-pw-cur');if(o)o.textContent=s.exists?'Mot de passe actuel : '+s.data().pw:'Mot de passe inconnu (profil créé avant cette version).';
+     var o=document.getElementById('k-pw-cur');if(o)o.textContent=s.exists?tx('kid.pw.current',{pw:s.data().pw}):tx('kid.pw.unknown');
    },function(e){toast(errMsg(e),true)});
  },
  kidPw:function(f){
    var k=P(f.dataset.id),np=document.getElementById('k-pw').value;
    if(!k)return;
-   if(np.length<6)return setErr('Le mot de passe doit contenir au moins 6 caractères.');
+   if(np.length<6)return setErr(tx('err.pass6'));
    return run(function(){
      return db.doc('families/'+S.fid+'/private/kid_'+k.id).get().then(function(s){
-       if(!s.exists)fail("Le mot de passe actuel n'est pas connu : impossible de le changer ici.");
+       if(!s.exists)fail(tx('err.pwunknown'));
        return kidEmail(fam().code,k.login||k.pseudo).then(function(em){return window.QFB.setPasswordOther(em,s.data().pw,np)});
      }).then(function(){return db.doc('families/'+S.fid+'/private/kid_'+k.id).set({pw:np})});
-   },'Mot de passe changé').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.passchanged')).then(function(ok){if(ok)closeSheet()});
  },
  copy:function(){
-   var c=fam().code||'';var shown=function(){toast('Code : '+fmtCode(c))};
-   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(c).then(function(){toast('Code copié : '+fmtCode(c))},shown);else shown();
+   var c=fam().code||'';var shown=function(){toast(tx('toast.code',{c:fmtCode(c)}))};
+   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(c).then(function(){toast(tx('toast.codecopied',{c:fmtCode(c)}))},shown);else shown();
  },
  pickpts:function(el){
    var t=document.getElementById(el.dataset.target);if(t)t.value=el.dataset.v;
@@ -1131,65 +1147,65 @@ var A={
 
  /* Quêtes */
  questSheet:function(){
-   if(!kids().length){toast("Ajoute d'abord un mineur dans l'onglet Famille.");return}
-   openSheet('Nouvelle quête',tplRow()+'<form data-submit="addQuest"><div class="field"><label for="q-title">Quête</label><input id="q-title" type="text" maxlength="60" placeholder="Ranger sa chambre" autocomplete="off"></div>'+
-   '<div class="field"><label for="q-desc">Détails (facultatif)</label><textarea id="q-desc" maxlength="200" placeholder="Lit fait, sol dégagé, linge dans le panier."></textarea></div>'+
-   '<div class="field"><span class="lbl">Points</span>'+pills([5,10,20,30,50,100],'q-pts',10)+'</div>'+
-   '<div class="field"><label for="q-for">Pour</label><select id="q-for">'+kidOptions(true)+'</select></div>'+
-   ''+stepsField(null)+catField('')+dueField(0)+prioField(false)+'<label class="check-row"><input id="q-rep" type="checkbox"> Se relance après chaque validation</label><p class="err" role="alert"></p><button class="btn block" type="submit">Publier la quête</button></form>');
+   if(!kids().length){toast(tx('toast.addkidfirst'));return}
+   openSheet(tx('quest.new'),tplRow()+'<form data-submit="addQuest"><div class="field"><label for="q-title">'+tx('field.quest')+'</label><input id="q-title" type="text" maxlength="60" placeholder="'+tx('ph.quest')+'" autocomplete="off"></div>'+
+   '<div class="field"><label for="q-desc">'+tx('field.details')+'</label><textarea id="q-desc" maxlength="200" placeholder="'+tx('ph.details')+'"></textarea></div>'+
+   '<div class="field"><span class="lbl">'+tx('field.points')+'</span>'+pills([5,10,20,30,50,100],'q-pts',10)+'</div>'+
+   '<div class="field"><label for="q-for">'+tx('field.for')+'</label><select id="q-for">'+kidOptions(true)+'</select></div>'+
+   ''+stepsField(null)+catField('')+dueField(0)+prioField(false)+'<label class="check-row"><input id="q-rep" type="checkbox"> '+tx('field.repeat')+'</label><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('quest.publish')+'</button></form>');
  },
  addQuest:function(){
    var title=val('q-title'),pts=numOf('q-pts'),to=val('q-for'),rep=!!$('#q-rep').checked,desc=val('q-desc'),dv=val('q-due'),due=dv?new Date(dv).getTime():0,cat=val('q-cat'),prio=!!$('#q-prio').checked,steps=parseSteps(val('q-steps'),[]);
-   if(!title)return setErr('Donne un titre à la quête.');
-   if(dv&&(!isFinite(due)||due<=Date.now()))return setErr('La date limite doit être dans le futur.');
-   if(!(pts>=1&&pts<=1000))return setErr('Les points doivent être entre 1 et 1000.');
+   if(!title)return setErr(tx('err.questtitle'));
+   if(dv&&(!isFinite(due)||due<=Date.now()))return setErr(tx('err.duefuture'));
+   if(!(pts>=1&&pts<=1000))return setErr(tx('err.pts1000'));
    return run(function(){
      return col('quests').add({title:title,desc:desc,points:pts,assignedTo:to,repeat:rep,deadline:due,cat:cat,prio:prio,steps:steps,status:'open',createdAt:Date.now()}).then(function(){
        var ids=to==='all'?kids().map(function(k){return k.id}):[to];
-       return notifyMany(ids,'Nouvelle quête : « '+title+' » (+'+pts+' pts)'+(due?' · avant le '+fmtDue(due):''),'info');
+       return notifyMany(ids,tx('n.quest.new',{t:title,pts:pts})+(due?' · '+tx('n.due',{d:fmtDue(due)}):''),'info');
      });
-   },'Quête publiée').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.questpublished')).then(function(ok){if(ok)closeSheet()});
  },
  editQuest:function(el){
    var q=Q(el.dataset.id);if(!q||q.status==='validee')return;
    var opts=kidOptions(true).replace('value="'+esc(q.assignedTo)+'"','value="'+esc(q.assignedTo)+'" selected');
-   openSheet('Modifier la quête','<form data-submit="saveQuest" data-id="'+esc(q.id)+'"><div class="field"><label for="q-title">Quête</label><input id="q-title" type="text" maxlength="60" value="'+esc(q.title)+'" autocomplete="off"></div>'+
-   '<div class="field"><label for="q-desc">Détails (facultatif)</label><textarea id="q-desc" maxlength="200">'+esc(q.desc||'')+'</textarea></div>'+
-   '<div class="field"><span class="lbl">Points</span>'+pills([5,10,20,30,50,100],'q-pts',q.points)+'</div>'+
-   '<div class="field"><label for="q-for">Pour</label><select id="q-for">'+opts+'</select></div>'+stepsField(q)+catField(q.cat||'')+dueField(q.deadline)+prioField(q.prio)+
-   '<label class="check-row"><input id="q-rep" type="checkbox"'+(q.repeat?' checked':'')+'> Se relance après chaque validation</label>'+
-   (q.status==='a_valider'?'<p class="muted" style="margin-bottom:10px">Cette quête attend ta validation : le nouveau nombre de points sera appliqué à la validation.</p>':'')+
-   '<p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer</button></form>');
+   openSheet(tx('quest.edit'),'<form data-submit="saveQuest" data-id="'+esc(q.id)+'"><div class="field"><label for="q-title">'+tx('field.quest')+'</label><input id="q-title" type="text" maxlength="60" value="'+esc(q.title)+'" autocomplete="off"></div>'+
+   '<div class="field"><label for="q-desc">'+tx('field.details')+'</label><textarea id="q-desc" maxlength="200">'+esc(q.desc||'')+'</textarea></div>'+
+   '<div class="field"><span class="lbl">'+tx('field.points')+'</span>'+pills([5,10,20,30,50,100],'q-pts',q.points)+'</div>'+
+   '<div class="field"><label for="q-for">'+tx('field.for')+'</label><select id="q-for">'+opts+'</select></div>'+stepsField(q)+catField(q.cat||'')+dueField(q.deadline)+prioField(q.prio)+
+   '<label class="check-row"><input id="q-rep" type="checkbox"'+(q.repeat?' checked':'')+'> '+tx('field.repeat')+'</label>'+
+   (q.status==='a_valider'?'<p class="muted" style="margin-bottom:10px">'+tx('quest.editwait')+'</p>':'')+
+   '<p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.save')+'</button></form>');
  },
  clearDue:function(){var i=document.getElementById('q-due');if(i)i.value=''},
  saveQuest:function(f){
    var q=Q(f.dataset.id);if(!q||q.status==='validee')return;
    var title=val('q-title'),desc=val('q-desc'),pts=numOf('q-pts'),to=val('q-for'),rp=!!$('#q-rep').checked,dv=val('q-due'),due=dv?new Date(dv).getTime():0,cat=val('q-cat'),prio=!!$('#q-prio').checked,steps=parseSteps(val('q-steps'),q.steps||[]);
-   if(!title)return setErr('Donne un titre à la quête.');
-   if(!(pts>=1&&pts<=1000))return setErr('Les points doivent être entre 1 et 1000.');
-   if(dv&&!isFinite(due))return setErr('Date limite invalide.');
-   if(due&&due<=Date.now()&&due!==q.deadline)return setErr('La date limite est déjà passée. Choisis une date future ou retire-la.');
+   if(!title)return setErr(tx('err.questtitle'));
+   if(!(pts>=1&&pts<=1000))return setErr(tx('err.pts1000'));
+   if(dv&&!isFinite(due))return setErr(tx('err.dueinvalid'));
+   if(due&&due<=Date.now()&&due!==q.deadline)return setErr(tx('err.duepast'));
    return run(function(){
      return dref('quests',q.id).update({title:title,desc:desc,points:pts,assignedTo:to,repeat:rp,deadline:due,cat:cat,prio:prio,steps:steps}).then(function(){
        if(q.status!=='open')return;
        var ids=to==='all'?kids().map(function(k){return k.id}):[to];
-       return notifyMany(ids,'Quête modifiée : « '+title+' » (+'+pts+' pts)'+(due?' · avant le '+fmtDue(due):''),'info');
+       return notifyMany(ids,tx('n.quest.edit',{t:title,pts:pts})+(due?' · '+tx('n.due',{d:fmtDue(due)}):''),'info');
      });
-   },'Quête modifiée').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.questedited')).then(function(ok){if(ok)closeSheet()});
  },
- delQuest:function(el){if(arm(el))return;return run(function(){return dref('quests',el.dataset.id).delete()},'Quête supprimée')},
+ delQuest:function(el){if(arm(el))return;return run(function(){return dref('quests',el.dataset.id).delete()},tx('toast.questdeleted'))},
  finishNow:function(el,note){
    var q=Q(el.dataset.id);if(!q||q.status!=='open')return;var m=me();
-   if(isExp(q)){toast("Trop tard : la date limite est passée, cette quête ne rapporte plus de points.",true);return}
+   if(isExp(q)){toast(tx('toast.toolate'),true);return}
    return run(function(){
      return dref('quests',q.id).update({status:'a_valider',doneBy:m.id,doneAt:Date.now(),doneNote:note||'',refusal:''}).then(function(){
-       return notify('tuteurs',m.pseudo+' a terminé « '+q.title+' » (+'+q.points+' pts à valider)'+(note?' : « '+note+' »':''),'todo');
+       return notify('tuteurs',tx('n.finished',{name:m.pseudo,t:q.title,pts:q.points})+(note?' '+tx('n.finished.note',{t:note}):''),'todo');
      });
-   },'Envoyée au tuteur pour validation');
+   },tx('toast.sentguardian'));
  },
  undo:function(el){
    var q=Q(el.dataset.id);if(!q||q.status!=='a_valider'||q.doneBy!==S.pid)return;
-   return run(function(){return dref('quests',q.id).update({status:'open',doneBy:'',doneAt:0})},'Quête remise à faire');
+   return run(function(){return dref('quests',q.id).update({status:'open',doneBy:'',doneAt:0})},tx('toast.questreopened'));
  },
  validateNow:function(el,bonus,comment){
    var q=Q(el.dataset.id);if(!q||q.status!=='a_valider')return;var kid=q.doneBy;
@@ -1197,35 +1213,35 @@ var A={
      return col('ledger').doc('q-'+q.id).set({kid:kid,delta:q.points,reason:q.title,at:Date.now(),type:'quete',ref:q.id,by:actorId()}).then(function(){return bonus>0?col('ledger').doc('qb-'+q.id).set({kid:kid,delta:bonus,reason:'Bonus : '+q.title,at:Date.now(),type:'bonus',ref:q.id,by:actorId()}):null}).then(function(){
        return dref('quests',q.id).update({status:'validee',validatedAt:Date.now(),comment:comment||'',bonus:bonus||0});
      }).then(function(){
-       return notify(kid,'Quête validée : « '+q.title+' ». +'+(q.points+(bonus||0))+' pts'+(comment?' : '+comment:''),'ok');
+       return notify(kid,tx('n.approved',{t:q.title,pts:q.points+(bonus||0)})+(comment?tx('n.comment',{t:comment}):''),'ok');
      }).then(function(){
        if(q.repeat)return col('quests').add({title:q.title,desc:q.desc||'',points:q.points,assignedTo:q.assignedTo,repeat:true,cat:q.cat||'',prio:!!q.prio,steps:(q.steps||[]).map(function(x){return {t:x.t,d:false}}),status:'open',createdAt:Date.now()});
      });
-   },'+'+(q.points+(bonus||0))+' pts pour '+nameOf(kid));
+   },tx('toast.ptsfor',{pts:'+'+(q.points+(bonus||0)),name:nameOf(kid)}));
  },
  tpl:function(el){
    var t=TPL[parseInt(el.dataset.v,10)];if(!t)return;
    var a=document.getElementById('q-title'),b=document.getElementById('q-pts'),c=document.getElementById('q-cat');
-   if(a)a.value=t[0];
+   if(a)a.value=tx(t[0]);
    if(b){b.value=t[1];b.dispatchEvent(new Event('input',{bubbles:true}))}
    if(c)c.value=t[2];
  },
  qfilter:function(el){S.qf=el.dataset.v;render()},
  finish:function(el){
    var q=Q(el.dataset.id);if(!q||q.status!=='open')return;
-   if(isExp(q)){toast('Trop tard : la date limite est passée, cette quête ne rapporte plus de points.',true);return}
-   if((q.steps||[]).some(function(x){return !x.d})){toast('Coche d\'abord toutes les étapes de la quête.',true);return}
-   openSheet('Quête terminée','<p><b>'+esc(q.title)+'</b> · +'+q.points+' pts</p><form data-submit="finishGo" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><label for="f-note">Un mot pour le tuteur (facultatif)</label><input id="f-note" type="text" maxlength="100" placeholder="Fait, et j\'ai aussi rangé le bureau" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Envoyer pour validation</button></form>');
+   if(isExp(q)){toast(tx('toast.toolate'),true);return}
+   if((q.steps||[]).some(function(x){return !x.d})){toast(tx('toast.stepsfirst'),true);return}
+   openSheet(tx('finish.title'),'<p><b>'+esc(q.title)+'</b> · +'+q.points+' pts</p><form data-submit="finishGo" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><label for="f-note">'+tx('finish.note')+'</label><input id="f-note" type="text" maxlength="100" placeholder="'+tx('finish.ph')+'" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('finish.send')+'</button></form>');
  },
  finishGo:function(f){return Promise.resolve(A.finishNow({dataset:{id:f.dataset.id}},val('f-note'))).then(function(ok){if(ok)closeSheet()})},
  validate:function(el){return A.validateNow(el,0,'')},
  validateSheet:function(el){
    var q=Q(el.dataset.id);if(!q||q.status!=='a_valider')return;
-   openSheet('Valider avec bonus','<p><b>'+esc(q.title)+'</b> · '+esc(nameOf(q.doneBy))+'</p>'+(q.doneNote?'<p class="muted">« '+esc(q.doneNote)+' »</p>':'')+'<form data-submit="validateGo" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><span class="lbl">Bonus en points (facultatif)</span>'+pills([0,5,10,20],'v-bonus',0)+'</div><div class="field"><label for="v-msg">Message pour '+esc(nameOf(q.doneBy))+' (facultatif)</label><input id="v-msg" type="text" maxlength="100" placeholder="Bravo, nickel !" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Valider la quête</button></form>');
+   openSheet(tx('val.title'),'<p><b>'+esc(q.title)+'</b> · '+esc(nameOf(q.doneBy))+'</p>'+(q.doneNote?'<p class="muted">'+tx('quote',{t:esc(q.doneNote)})+'</p>':'')+'<form data-submit="validateGo" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><span class="lbl">'+tx('val.bonus')+'</span>'+pills([0,5,10,20],'v-bonus',0)+'</div><div class="field"><label for="v-msg">'+tx('val.msg',{name:esc(nameOf(q.doneBy))})+'</label><input id="v-msg" type="text" maxlength="100" placeholder="'+tx('val.ph')+'" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('val.btn')+'</button></form>');
  },
  validateGo:function(f){
    var bv=val('v-bonus'),bonus=bv===''?0:parseInt(bv,10);
-   if(!isFinite(bonus)||bonus<0||bonus>1000)return setErr('Bonus invalide (de 0 à 1000).');
+   if(!isFinite(bonus)||bonus<0||bonus>1000)return setErr(tx('err.bonus'));
    return Promise.resolve(A.validateNow({dataset:{id:f.dataset.id}},bonus,val('v-msg'))).then(function(ok){if(ok)closeSheet()});
  },
  undoValidate:function(el){
@@ -1234,55 +1250,55 @@ var A={
    return run(function(){
      return dref('ledger','q-'+q.id).delete().then(function(){return dref('ledger','qb-'+q.id).delete()}).then(function(){
        return dref('quests',q.id).update({status:'a_valider',validatedAt:0,comment:'',bonus:0});
-     }).then(function(){return notify(q.doneBy,'La validation de « '+q.title+' » a été annulée.','bad')});
-   },'Validation annulée');
+     }).then(function(){return notify(q.doneBy,tx('n.undone',{t:q.title}),'bad')});
+   },tx('toast.undone'));
  },
  goal:function(el){
    var m=me(),v=m.goal===el.dataset.id?'':el.dataset.id;
-   return run(function(){return dref('people',m.id).update({goal:v})},v?'Objectif choisi':'Objectif retiré');
+   return run(function(){return dref('people',m.id).update({goal:v})},v?tx('btn.goalchosen'):tx('toast.goalremoved'));
  },
  photoSheet:function(){
    var m=me();
-   openSheet('Ma photo de profil','<div style="display:grid;justify-items:center;gap:14px">'+av(m,'big')+'<div class="field" style="width:100%"><label for="av-file">Choisir une photo</label><input id="av-file" type="file" accept="image/*"><small>Elle est recadrée en carré et réduite. Elle remplace la lettre dans les pastilles.</small></div><p class="err" role="alert"></p>'+(okPhoto(m.photo)?btn('Retirer ma photo','photoClear',{cls:'ghost block'}):'')+'</div>');
+   openSheet(tx('photo.title'),'<div style="display:grid;justify-items:center;gap:14px">'+av(m,'big')+'<div class="field" style="width:100%"><label for="av-file">'+tx('photo.choose')+'</label><input id="av-file" type="file" accept="image/*"><small>'+tx('photo.hint')+'</small></div><p class="err" role="alert"></p>'+(okPhoto(m.photo)?btn(tx('photo.remove'),'photoClear',{cls:'ghost block'}):'')+'</div>');
  },
  photoClear:function(){
    var m=me();
-   return run(function(){return dref('people',m.id).update({photo:''})},'Photo retirée').then(function(ok){if(ok)closeSheet()});
+   return run(function(){return dref('people',m.id).update({photo:''})},tx('toast.photoremoved')).then(function(ok){if(ok)closeSheet()});
  },
  pinSheet:function(){
    if(!isT())return;
-   openSheet('Changer le code tuteur','<p class="muted">Ce code permet à un autre parent de rejoindre la famille en tant que tuteur. Il n\'ouvre plus d\'espace sur le téléphone des enfants.</p><form data-submit="pinSave" style="margin-top:12px"><div class="field"><label for="pn-old">Code actuel</label><input id="pn-old" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><div class="field"><label for="pn-new">Nouveau code (8 à 12 lettres ou chiffres)</label><input id="pn-new" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><div class="field"><label for="pn-new2">Confirmer le nouveau code</label><input id="pn-new2" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer le nouveau code</button></form>');
+   openSheet(tx('menu.pin'),'<p class="muted">'+tx('pin.help')+'</p><form data-submit="pinSave" style="margin-top:12px"><div class="field"><label for="pn-old">'+tx('pin.cur')+'</label><input id="pn-old" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><div class="field"><label for="pn-new">'+tx('pin.new')+'</label><input id="pn-new" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><div class="field"><label for="pn-new2">'+tx('pin.confirm')+'</label><input id="pn-new2" type="password" maxlength="12" autocomplete="off" autocapitalize="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('pin.save')+'</button></form>');
  },
  pinSave:function(){
    if(!isT())return;
-   if(Date.now()<S.pinLock)return setErr('Trop d\'essais. Patiente quelques secondes.');
+   if(Date.now()<S.pinLock)return setErr(tx('err.wait30'));
    var o=val('pn-old'),n=val('pn-new');
    return db.doc('families/'+S.fid+'/private/pin').get().then(function(s){
      var cur=s.exists?String(s.data().pin):'';
      if(cur!==o){
        S.pinFail++;
-       if(S.pinFail>=3){S.pinLock=Date.now()+30000;S.pinFail=0;return setErr('3 erreurs : accès bloqué pendant 30 secondes.')}
-       return setErr('Code actuel incorrect.');
+       if(S.pinFail>=3){S.pinLock=Date.now()+30000;S.pinFail=0;return setErr(tx('err.locked'))}
+       return setErr(tx('err.pincur'));
      }
-     if(!okTutorCode(n))return setErr('Le nouveau code doit contenir 8 à 12 lettres ou chiffres.');
-     if(n!==val('pn-new2'))return setErr('Les deux codes ne sont pas identiques.');
-     if(n===cur)return setErr('Choisis un code différent de l\'actuel.');
+     if(!okTutorCode(n))return setErr(tx('err.pinnew'));
+     if(n!==val('pn-new2'))return setErr(tx('err.pinmatch'));
+     if(n===cur)return setErr(tx('err.pindiff'));
      S.pinFail=0;
-     return run(function(){return db.doc('families/'+S.fid+'/private/pin').set({pin:n})},'Code tuteur modifié').then(function(ok){if(ok)closeSheet()});
+     return run(function(){return db.doc('families/'+S.fid+'/private/pin').set({pin:n})},tx('toast.pinchanged')).then(function(ok){if(ok)closeSheet()});
    },function(e){setErr(errMsg(e))});
  },
  colorSheet:function(){
    var m=me();
-   openSheet('Ma couleur','<div class="swatches">'+[0,1,2,3,4,5].map(function(i){return '<button class="swatch h'+i+(((m.hue||0)%6)===i?' on':'')+'" data-a="setHue" data-v="'+i+'" aria-label="Couleur '+(i+1)+'">'+esc(m.pseudo.charAt(0).toUpperCase())+'</button>'}).join('')+'</div>');
+   openSheet(tx('menu.color'),'<div class="swatches">'+[0,1,2,3,4,5].map(function(i){return '<button class="swatch h'+i+(((m.hue||0)%6)===i?' on':'')+'" data-a="setHue" data-v="'+i+'" aria-label="'+tx('aria.color',{n:i+1})+'">'+esc(m.pseudo.charAt(0).toUpperCase())+'</button>'}).join('')+'</div>');
  },
  setHue:function(el){
    var m=me();
-   return run(function(){return dref('people',m.id).update({hue:parseInt(el.dataset.v,10)})},'Couleur changée').then(function(ok){if(ok)closeSheet()});
+   return run(function(){return dref('people',m.id).update({hue:parseInt(el.dataset.v,10)})},tx('toast.colorchanged')).then(function(ok){if(ok)closeSheet()});
  },
  setRate:function(){
    var raw=val('rate').replace(',','.'),r=raw?parseFloat(raw):0;
-   if(raw&&!(r>0&&r<=1000))return setErr('Saisis un nombre positif, par exemple 0,10.');
-   return run(function(){return db.doc('families/'+S.fid).update({rate:r||0})},'Réglage enregistré');
+   if(raw&&!(r>0&&r<=1000))return setErr(tx('err.rate'));
+   return run(function(){return db.doc('families/'+S.fid).update({rate:r||0})},tx('toast.settingsaved'));
  },
  chan:function(el){S.chan=el.dataset.v;S.stick=true;render()},
  sendMsg:function(f){
@@ -1298,22 +1314,22 @@ var A={
  delMsg:function(el){
    if(!isT())return;
    if(arm(el))return;
-   return run(function(){return dref('messages',el.dataset.id).delete()},'Message supprimé');
+   return run(function(){return dref('messages',el.dataset.id).delete()},tx('toast.msgdeleted'));
  },
  parentSheet:function(){
-   if(!S.fam){toast('Famille pas encore chargée.',true);return}
+   if(!S.fam){toast(tx('toast.famloading'),true);return}
    var left=Math.ceil((S.pinLock-Date.now())/1000);
-   if(left>0){toast('Trop d\'essais. Réessaie dans '+left+' s.',true);return}
+   if(left>0){toast(tx('toast.retryin',{n:left}),true);return}
    var opts=tutors().map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.pseudo)+'</option>'}).join('');
-   openSheet('Espace parent','<p class="muted">Un tuteur saisit son PIN pour ajouter ou retirer des points, valider des quêtes ou remettre une récompense, directement sur ce téléphone.</p><form data-submit="parentGo" style="margin-top:12px"><div class="field"><label for="pp-who">Tuteur</label><select id="pp-who">'+opts+'</select></div><div class="field"><label for="pp-pin">PIN tuteur</label><input id="pp-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">Ouvrir</button></form>');
+   openSheet(tx('parent.title'),'<p class="muted">'+tx('parent.help')+'</p><form data-submit="parentGo" style="margin-top:12px"><div class="field"><label for="pp-who">'+tx('role.tutor')+'</label><select id="pp-who">'+opts+'</select></div><div class="field"><label for="pp-pin">'+tx('parent.pin')+'</label><input id="pp-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('parent.open')+'</button></form>');
    var i=document.getElementById('pp-pin');if(i)i.focus();
  },
  parentGo:function(){
-   if(Date.now()<S.pinLock)return setErr('Trop d\'essais. Patiente quelques secondes.');
+   if(Date.now()<S.pinLock)return setErr(tx('err.wait30'));
    if(String((S.fam||{}).pin)!==val('pp-pin')){
      S.pinFail++;
-     if(S.pinFail>=3){S.pinLock=Date.now()+30000;S.pinFail=0;return setErr('3 erreurs : accès bloqué pendant 30 secondes.')}
-     return setErr('PIN incorrect.');
+     if(S.pinFail>=3){S.pinLock=Date.now()+30000;S.pinFail=0;return setErr(tx('err.locked'))}
+     return setErr(tx('err.pinbad'));
    }
    S.pinFail=0;S.parentOk=true;S.parentBy=val('pp-who');
    A.parentPanel();
@@ -1324,10 +1340,10 @@ var A={
    var pend=S.quests.filter(function(q){return q.status==='a_valider'&&q.doneBy===m.id});
    var ex=S.wishes.filter(function(w){return w.status==='echange'&&w.redeemedBy===m.id});
    var h='<div id="pp-top">'+ppTop()+'</div>';
-   h+='<h3 class="sub">Ajouter ou retirer des points</h3><div class="field"><span class="lbl">Nombre de points</span>'+pills([5,10,20,50],'a-n',10)+'</div><div class="field"><label for="a-why">Raison (visible par le mineur)</label><input id="a-why" type="text" maxlength="60" autocomplete="off"></div><p class="err" role="alert"></p><div class="acts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn bad" type="button" data-a="pAdjust" data-v="-1">Retirer</button><button class="btn ok" type="button" data-a="pAdjust" data-v="1">Ajouter</button></div>';
+   h+='<h3 class="sub">'+tx('adj.title')+'</h3><div class="field"><span class="lbl">'+tx('adj.count')+'</span>'+pills([5,10,20,50],'a-n',10)+'</div><div class="field"><label for="a-why">'+tx('adj.reasonparent')+'</label><input id="a-why" type="text" maxlength="60" autocomplete="off"></div><p class="err" role="alert"></p><div class="acts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn bad" type="button" data-a="pAdjust" data-v="-1">'+tx('adj.remove')+'</button><button class="btn ok" type="button" data-a="pAdjust" data-v="1">'+tx('adj.add')+'</button></div>';
    h+='<div id="pp-lists">'+ppLists()+'</div>';
-   h+=btn('Quitter l\'espace parent','close',{cls:'ghost block'});
-   openSheet('Espace parent',h);
+   h+=btn(tx('parent.leave'),'close',{cls:'ghost block'});
+   openSheet(tx('parent.title'),h);
  },
  pAdjust:function(el){
    if(!S.parentOk)return;
@@ -1342,167 +1358,167 @@ var A={
  },
  editReward:function(el){
    var w=W(el.dataset.id);if(!w||w.status!=='accepte')return;
-   var opts='<option value="all"'+(w.for==='all'?' selected':'')+'>Tous les mineurs</option>'+kids().map(function(k){return '<option value="'+esc(k.id)+'"'+(w.for===k.id?' selected':'')+'>'+esc(k.pseudo)+'</option>'}).join('');
-   openSheet('Modifier la récompense','<form data-submit="saveReward" data-id="'+esc(w.id)+'"><div class="field"><label for="rw-title">Récompense</label><input id="rw-title" type="text" maxlength="60" value="'+esc(w.title)+'" autocomplete="off"></div><div class="field"><label for="rw-for">Pour</label><select id="rw-for">'+opts+'</select></div><div class="field"><span class="lbl">Prix en points</span>'+pills([25,50,100,200,500],'rw-cost',w.cost)+'</div><label class="check-row"><input id="rw-once" type="checkbox"'+(w.once?' checked':'')+'> Une seule fois (disparaît après l\'échange)</label><p class="err" role="alert"></p><button class="btn block" type="submit">Enregistrer</button></form>');
+   var opts='<option value="all"'+(w.for==='all'?' selected':'')+'>'+tx('chip.allkids')+'</option>'+kids().map(function(k){return '<option value="'+esc(k.id)+'"'+(w.for===k.id?' selected':'')+'>'+esc(k.pseudo)+'</option>'}).join('');
+   openSheet(tx('reward.edit'),'<form data-submit="saveReward" data-id="'+esc(w.id)+'"><div class="field"><label for="rw-title">'+tx('field.reward')+'</label><input id="rw-title" type="text" maxlength="60" value="'+esc(w.title)+'" autocomplete="off"></div><div class="field"><label for="rw-for">'+tx('field.for')+'</label><select id="rw-for">'+opts+'</select></div><div class="field"><span class="lbl">'+tx('field.price')+'</span>'+pills([25,50,100,200,500],'rw-cost',w.cost)+'</div><label class="check-row"><input id="rw-once" type="checkbox"'+(w.once?' checked':'')+'> '+tx('field.once')+'</label><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('btn.save')+'</button></form>');
  },
  saveReward:function(f){
    var w=W(f.dataset.id);if(!w||w.status!=='accepte')return;
    var title=val('rw-title'),to=val('rw-for'),cost=numOf('rw-cost'),once=!!$('#rw-once').checked;
-   if(!title)return setErr('Donne un nom à la récompense.');
-   if(!(cost>=1&&cost<=1000))return setErr('Le prix doit être entre 1 et 1000 points.');
-   return run(function(){return dref('wishes',w.id).update({title:title,for:to,cost:cost,once:once})},'Récompense modifiée').then(function(ok){if(ok)closeSheet()});
+   if(!title)return setErr(tx('err.rewardname'));
+   if(!(cost>=1&&cost<=1000))return setErr(tx('err.price1000'));
+   return run(function(){return dref('wishes',w.id).update({title:title,for:to,cost:cost,once:once})},tx('toast.rewardedited')).then(function(ok){if(ok)closeSheet()});
  },
  setNotice:function(){
    var t=val('notice');
-   return run(function(){return db.doc('families/'+S.fid).update({notice:t?{text:t,at:Date.now()}:null})},t?'Annonce publiée':'Annonce retirée');
+   return run(function(){return db.doc('families/'+S.fid).update({notice:t?{text:t,at:Date.now()}:null})},t?tx('toast.noticepub'):tx('toast.noticeoff'));
  },
  setFamGoal:function(){
    var title=val('fg-title'),target=numOf('fg-target');
-   if(!title)return setErr('Donne un nom au défi.');
-   if(!(target>=10&&target<=10000))return setErr('Le nombre de points doit être entre 10 et 10 000.');
-   return run(function(){return db.doc('families/'+S.fid).update({famGoal:{title:title,target:target,since:Date.now()}})},'Défi lancé').then(function(ok){if(ok){var a=$('#fg-title'),b=$('#fg-target');if(a)a.value='';if(b)b.value=''}});
+   if(!title)return setErr(tx('err.fgname'));
+   if(!(target>=10&&target<=10000))return setErr(tx('err.fgpts'));
+   return run(function(){return db.doc('families/'+S.fid).update({famGoal:{title:title,target:target,since:Date.now()}})},tx('toast.fgstarted')).then(function(ok){if(ok){var a=$('#fg-title'),b=$('#fg-target');if(a)a.value='';if(b)b.value=''}});
  },
  clearFamGoal:function(el){
    if(arm(el))return;
-   return run(function(){return db.doc('families/'+S.fid).update({famGoal:null})},'Défi terminé');
+   return run(function(){return db.doc('families/'+S.fid).update({famGoal:null})},tx('toast.fgended'));
  },
  toggleBoard:function(){return run(function(){return db.doc('families/'+S.fid).update({board:!fam().board})})},
  bgSheet:function(){
    var tab=S.tab,cur=S.bgs[tab]||{},veil=cur.veil==null?55:cur.veil;
-   openSheet('Arrière-plan · '+(TABLABEL[tab]||''),
-    '<div class="field"><span class="lbl">Modèles</span><div class="bgs">'+PRESETS.map(function(x){return '<button type="button" class="bgp'+(cur.t==='preset'&&cur.v===x.id?' on':'')+'" data-a="bgPick" data-v="'+x.id+'" style="background:'+x.css+'" aria-label="'+esc(x.name)+'"></button>'}).join('')+'</div></div>'+
-    '<div class="field"><label for="bg-color">Couleur unie</label><input id="bg-color" type="color" value="'+(cur.t==='color'&&validBg(cur)?cur.v:'#5b8def')+'"></div>'+
-    '<div class="field"><label for="bg-file">Ma photo</label><input id="bg-file" type="file" accept="image/*"><small>La photo est réduite puis enregistrée dans la famille. Chaque profil a ses propres arrière-plans.</small></div>'+
-    '<div class="field"><label for="bg-veil">Voile pour garder le texte lisible : <span id="bg-veil-v">'+veil+'</span> %</label><input id="bg-veil" type="range" min="0" max="85" step="5" value="'+veil+'"></div>'+
-    '<p class="err" role="alert"></p>'+btn('Retirer l\'arrière-plan','bgClear',{cls:'ghost block'}));
+   openSheet(tx('bg.title')+' · '+(TABLABEL[tab]||''),
+    '<div class="field"><span class="lbl">'+tx('bg.models')+'</span><div class="bgs">'+PRESETS.map(function(x){return '<button type="button" class="bgp'+(cur.t==='preset'&&cur.v===x.id?' on':'')+'" data-a="bgPick" data-v="'+x.id+'" style="background:'+x.css+'" aria-label="'+esc(tx('bg.'+x.id))+'"></button>'}).join('')+'</div></div>'+
+    '<div class="field"><label for="bg-color">'+tx('bg.solid')+'</label><input id="bg-color" type="color" value="'+(cur.t==='color'&&validBg(cur)?cur.v:'#5b8def')+'"></div>'+
+    '<div class="field"><label for="bg-file">'+tx('bg.photo')+'</label><input id="bg-file" type="file" accept="image/*"><small>'+tx('bg.photohint')+'</small></div>'+
+    '<div class="field"><label for="bg-veil">'+tx('bg.veil')+' <span id="bg-veil-v">'+veil+'</span> %</label><input id="bg-veil" type="range" min="0" max="85" step="5" value="'+veil+'"></div>'+
+    '<p class="err" role="alert"></p>'+btn(tx('bg.remove'),'bgClear',{cls:'ghost block'}));
  },
  bgPick:function(el){bgSet({t:'preset',v:el.dataset.v});A.bgSheet()},
  bgClear:function(){
    var tab=S.tab;S.bgs[tab]=null;applyBg();
-   return run(function(){return db.doc('families/'+S.fid+'/prefs/'+S.pid+'_'+tab).delete()},'Arrière-plan retiré').then(function(ok){if(ok)closeSheet()});
+   return run(function(){return db.doc('families/'+S.fid+'/prefs/'+S.pid+'_'+tab).delete()},tx('toast.bgremoved')).then(function(ok){if(ok)closeSheet()});
  },
  refuseSheet:function(el){
    var q=Q(el.dataset.id);if(!q)return;
-   openSheet('À refaire','<p><b>'+esc(q.title)+'</b> · '+esc(nameOf(q.doneBy))+'</p>'+(q.deadline&&q.deadline<Date.now()?'<p class="note">La date limite est dépassée. Après le renvoi, la quête sera expirée, sauf si tu repousses la date avec « Modifier ».</p>':'')+'<form data-submit="refuse" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><label for="r-why">Ce qu\'il reste à faire (facultatif)</label><textarea id="r-why" maxlength="160" placeholder="Il reste du linge par terre."></textarea></div><button class="btn block" type="submit">Renvoyer la quête</button></form>');
+   openSheet(tx('btn.redo'),'<p><b>'+esc(q.title)+'</b> · '+esc(nameOf(q.doneBy))+'</p>'+(q.deadline&&q.deadline<Date.now()?'<p class="note">'+tx('redo.pastdue')+'</p>':'')+'<form data-submit="refuse" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><label for="r-why">'+tx('redo.label')+'</label><textarea id="r-why" maxlength="160" placeholder="'+tx('redo.ph')+'"></textarea></div><button class="btn block" type="submit">'+tx('redo.send')+'</button></form>');
  },
  refuse:function(f){
    var q=Q(f.dataset.id);if(!q||q.status!=='a_valider')return;var why=val('r-why'),kid=q.doneBy;
    return run(function(){
      return dref('quests',q.id).update({status:'open',doneBy:'',doneAt:0,refusal:why||'À refaire'}).then(function(){
-       return notify(kid,'« '+q.title+' » est à refaire'+(why?' : '+why:'')+'.','bad');
+       return notify(kid,tx('n.redo',{t:q.title})+(why?tx('n.comment',{t:why}):'')+'.','bad');
      });
-   },'Quête renvoyée').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.questsent')).then(function(ok){if(ok)closeSheet()});
  },
 
  /* Récompenses */
  rewardSheet:function(){
-   if(!kids().length){toast("Ajoute d'abord un mineur dans l'onglet Famille.");return}
-   openSheet('Proposer une récompense','<form data-submit="addReward"><div class="field"><label for="rw-title">Récompense</label><input id="rw-title" type="text" maxlength="60" placeholder="Une soirée cinéma" autocomplete="off"></div>'+
-   '<div class="field"><label for="rw-for">Pour</label><select id="rw-for">'+kidOptions(false).replace(/^/,'<option value="all">Tous les mineurs</option>')+'</select></div>'+
-   '<div class="field"><span class="lbl">Prix en points</span>'+pills([25,50,100,200,500],'rw-cost',50)+'</div><label class="check-row"><input id="rw-once" type="checkbox"> Une seule fois (disparaît après l\'échange)</label><p class="err" role="alert"></p><button class="btn block" type="submit">Ajouter au catalogue</button></form>');
+   if(!kids().length){toast(tx('toast.addkidfirst'));return}
+   openSheet(tx('reward.propose'),'<form data-submit="addReward"><div class="field"><label for="rw-title">'+tx('field.reward')+'</label><input id="rw-title" type="text" maxlength="60" placeholder="'+tx('ph.reward')+'" autocomplete="off"></div>'+
+   '<div class="field"><label for="rw-for">'+tx('field.for')+'</label><select id="rw-for">'+kidOptions(false).replace(/^/,'<option value="all">'+tx('chip.allkids')+'</option>')+'</select></div>'+
+   '<div class="field"><span class="lbl">'+tx('field.price')+'</span>'+pills([25,50,100,200,500],'rw-cost',50)+'</div><label class="check-row"><input id="rw-once" type="checkbox"> '+tx('field.once')+'</label><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('reward.addcat')+'</button></form>');
  },
  addReward:function(){
    var title=val('rw-title'),to=val('rw-for'),cost=numOf('rw-cost');
-   if(!title)return setErr('Donne un nom à la récompense.');
-   if(!(cost>=1&&cost<=1000))return setErr('Le prix doit être entre 1 et 1000 points.');
+   if(!title)return setErr(tx('err.rewardname'));
+   if(!(cost>=1&&cost<=1000))return setErr(tx('err.price1000'));
    return run(function(){
      return col('wishes').add({title:title,note:'',by:S.pid,for:to,cost:cost,status:'accepte',once:!!$('#rw-once').checked,createdAt:Date.now()}).then(function(){
        var ids=to==='all'?kids().map(function(k){return k.id}):[to];
-       return notifyMany(ids,'Nouvelle récompense : « '+title+' » à '+cost+' pts','info');
+       return notifyMany(ids,tx('n.reward.new',{t:title,c:cost}),'info');
      });
-   },'Récompense ajoutée').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.rewardadded')).then(function(ok){if(ok)closeSheet()});
  },
  wishSheet:function(){
-   openSheet('Je voudrais…','<form data-submit="addWish"><div class="field"><label for="w-title">Qu\'est-ce qui te ferait plaisir ?</label><input id="w-title" type="text" maxlength="60" placeholder="Une sortie au parc de jeux" autocomplete="off"></div><div class="field"><label for="w-note">Un détail ? (facultatif)</label><textarea id="w-note" maxlength="160"></textarea><small>Le tuteur décide ensuite du nombre de points nécessaires.</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">Envoyer la demande</button></form>');
+   openSheet(tx('wish.iwant'),'<form data-submit="addWish"><div class="field"><label for="w-title">'+tx('wish.what')+'</label><input id="w-title" type="text" maxlength="60" placeholder="'+tx('wish.ph')+'" autocomplete="off"></div><div class="field"><label for="w-note">'+tx('wish.detail')+'</label><textarea id="w-note" maxlength="160"></textarea><small>'+tx('wish.hint')+'</small></div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('wish.send')+'</button></form>');
  },
  addWish:function(){
    var title=val('w-title'),note=val('w-note'),m=me();
-   if(!title)return setErr('Dis ce que tu voudrais.');
+   if(!title)return setErr(tx('err.wishwhat'));
    return run(function(){
      return col('wishes').add({title:title,note:note,by:m.id,for:m.id,status:'demande',createdAt:Date.now()}).then(function(){
-       return notify('tuteurs',m.pseudo+' demande : « '+title+' »','todo');
+       return notify('tuteurs',tx('n.wish',{name:m.pseudo,t:title}),'todo');
      });
-   },'Demande envoyée aux tuteurs').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.wishsent')).then(function(ok){if(ok)closeSheet()});
  },
  priceSheet:function(el){
    var w=W(el.dataset.id);if(!w)return;
-   openSheet('Fixer le prix','<p><b>'+esc(w.title)+'</b> · demandé par '+esc(nameOf(w.by))+'</p>'+(w.note?'<p class="muted">'+esc(w.note)+'</p>':'')+
-   '<form data-submit="accept" data-id="'+esc(w.id)+'" style="margin-top:14px"><div class="field"><span class="lbl">Prix en points</span>'+pills([10,25,50,100,200],'w-cost',50)+'</div><p class="err" role="alert"></p><button class="btn block" type="submit">Accepter et fixer le prix</button></form>'+
-   '<h3 class="sub">Ou refuser</h3><div class="field"><label for="w-why">Raison (facultatif)</label><input id="w-why" type="text" maxlength="120" autocomplete="off"></div>'+btn('Refuser la demande','declineWish',{id:w.id,cls:'bad block'}));
+   openSheet(tx('btn.setprice'),'<p><b>'+esc(w.title)+'</b> · '+tx('price.askedby',{name:esc(nameOf(w.by))})+'</p>'+(w.note?'<p class="muted">'+esc(w.note)+'</p>':'')+
+   '<form data-submit="accept" data-id="'+esc(w.id)+'" style="margin-top:14px"><div class="field"><span class="lbl">'+tx('field.price')+'</span>'+pills([10,25,50,100,200],'w-cost',50)+'</div><p class="err" role="alert"></p><button class="btn block" type="submit">'+tx('price.accept')+'</button></form>'+
+   '<h3 class="sub">'+tx('price.orrefuse')+'</h3><div class="field"><label for="w-why">'+tx('field.reason')+'</label><input id="w-why" type="text" maxlength="120" autocomplete="off"></div>'+btn(tx('price.decline'),'declineWish',{id:w.id,cls:'bad block'}));
  },
  accept:function(f){
    var w=W(f.dataset.id);if(!w||w.status!=='demande')return;var cost=numOf('w-cost');
-   if(!(cost>=1&&cost<=1000))return setErr('Le prix doit être entre 1 et 1000 points.');
+   if(!(cost>=1&&cost<=1000))return setErr(tx('err.price1000'));
    return run(function(){
      return dref('wishes',w.id).update({status:'accepte',cost:cost}).then(function(){
-       return notify(w.by,'« '+w.title+' » est accepté : '+cost+' pts.','ok');
+       return notify(w.by,tx('n.accepted',{t:w.title,c:cost}),'ok');
      });
-   },'Prix fixé : '+cost+' pts').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.pricefixed',{c:cost})).then(function(ok){if(ok)closeSheet()});
  },
  declineWish:function(el){
    var w=W(el.dataset.id);if(!w||w.status!=='demande')return;var why=val('w-why');
    return run(function(){
      return dref('wishes',w.id).update({status:'refuse',refusal:why}).then(function(){
-       return notify(w.by,'« '+w.title+' » est refusé'+(why?' : '+why:'')+'.','bad');
+       return notify(w.by,tx('n.declined',{t:w.title})+(why?tx('n.comment',{t:why}):'')+'.','bad');
      });
-   },'Demande refusée').then(function(ok){if(ok)closeSheet()});
+   },tx('toast.wishdeclined')).then(function(ok){if(ok)closeSheet()});
  },
- delWish:function(el){if(arm(el))return;return run(function(){return dref('wishes',el.dataset.id).delete()},'Récompense supprimée')},
+ delWish:function(el){if(arm(el))return;return run(function(){return dref('wishes',el.dataset.id).delete()},tx('toast.rewarddeleted'))},
  exchange:function(el){
    var w=W(el.dataset.id),m=me();if(!w||w.status!=='accepte')return;
-   if(bal(m.id)<w.cost){toast("Il te manque des points pour l'instant.",true);return}
+   if(bal(m.id)<w.cost){toast(tx('toast.needpoints'),true);return}
    return run(function(){
      return col('ledger').doc('w-'+w.id+'-'+m.id+'-'+rid()).set({kid:m.id,delta:-w.cost,reason:w.title,at:Date.now(),type:'echange',ref:w.id}).then(function(){
        return w.once?dref('wishes',w.id).update({status:'echange',redeemedBy:m.id,exchangedAt:Date.now()}):col('wishes').add({title:w.title,note:w.note||'',by:w.by,for:m.id,cost:w.cost,status:'echange',redeemedBy:m.id,exchangedAt:Date.now(),createdAt:Date.now(),fromCatalog:w.id});
-     }).then(function(){return notify('tuteurs',m.pseudo+' échange '+w.cost+' pts contre « '+w.title+' »','todo')});
-   },'Échangé. Le tuteur va te le remettre.');
+     }).then(function(){return notify('tuteurs',tx('n.exchange',{name:m.pseudo,c:w.cost,t:w.title}),'todo')});
+   },tx('toast.exchanged'));
  },
  deliver:function(el){
    var w=W(el.dataset.id);if(!w||w.status!=='echange')return;
    return run(function(){
      return dref('wishes',w.id).update({status:'remis',deliveredAt:Date.now()}).then(function(){
-       return notify(w.redeemedBy,'« '+w.title+' » t\'a été remis. Profites-en !','ok');
+       return notify(w.redeemedBy,tx('n.delivered',{t:w.title}),'ok');
      });
-   },'Marqué comme remis');
+   },tx('toast.delivered'));
  },
 
  /* Famille */
  kidSheet:function(el){
    var k=P(el.dataset.id);if(!k)return;
    openSheet(k.pseudo,'<div class="hero sm"><span class="coin big">'+ic('star')+'</span><div><small>Points</small><div class="n">'+bal(k.id)+'</div></div></div>'+
-   '<h3 class="sub">Ajouter ou retirer des points</h3><div class="field"><span class="lbl">Nombre de points</span>'+pills([5,10,20,50],'a-n',10)+'</div>'+
-   '<div class="field"><label for="a-why">Raison (le mineur la voit)</label><input id="a-why" type="text" maxlength="60" placeholder="Chambre pas rangée" autocomplete="off"></div><p class="err" role="alert"></p>'+
-   '<div class="acts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn bad" type="button" data-a="adjust" data-id="'+esc(k.id)+'" data-v="-1">Retirer</button><button class="btn ok" type="button" data-a="adjust" data-id="'+esc(k.id)+'" data-v="1">Ajouter</button></div>'+
-   '<h3 class="sub">Profil</h3><form data-submit="editKid" data-id="'+esc(k.id)+'"><div class="field"><label for="e-pseudo">Pseudo</label><input id="e-pseudo" type="text" maxlength="20" value="'+esc(k.pseudo)+'"></div><div class="field"><label for="e-age">Âge</label><input id="e-age" type="number" inputmode="numeric" min="3" max="17" value="'+esc(k.age||'')+'"></div><div class="field"><label for="e-phone">Téléphone (facultatif)</label><input id="e-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="off" value="'+esc(phoneShow(k.phone||''))+'"></div><button class="btn ghost block" type="submit">Enregistrer</button></form>'+
-   '<h3 class="sub">Connexion</h3><p class="muted">Identifiant : <b>'+esc(k.login||k.pseudo)+'</b> · code famille : <b>'+esc(fmtCode(fam().code||''))+'</b></p><p id="k-pw-cur" class="muted"></p><button class="btn ghost block" type="button" data-a="kidPwShow" data-id="'+esc(k.id)+'">Voir le mot de passe</button><form data-submit="kidPw" data-id="'+esc(k.id)+'" style="margin-top:10px"><div class="field"><label for="k-pw">Nouveau mot de passe</label><input id="k-pw" type="password" autocomplete="new-password"></div><button class="btn ghost block" type="submit">Changer le mot de passe</button></form>');
+   '<h3 class="sub">'+tx('adj.title')+'</h3><div class="field"><span class="lbl">'+tx('adj.count')+'</span>'+pills([5,10,20,50],'a-n',10)+'</div>'+
+   '<div class="field"><label for="a-why">'+tx('adj.reason')+'</label><input id="a-why" type="text" maxlength="60" placeholder="'+tx('adj.ph')+'" autocomplete="off"></div><p class="err" role="alert"></p>'+
+   '<div class="acts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn bad" type="button" data-a="adjust" data-id="'+esc(k.id)+'" data-v="-1">'+tx('adj.remove')+'</button><button class="btn ok" type="button" data-a="adjust" data-id="'+esc(k.id)+'" data-v="1">'+tx('adj.add')+'</button></div>'+
+   '<h3 class="sub">'+tx('kid.profile')+'</h3><form data-submit="editKid" data-id="'+esc(k.id)+'"><div class="field"><label for="e-pseudo">'+tx('field.pseudo')+'</label><input id="e-pseudo" type="text" maxlength="20" value="'+esc(k.pseudo)+'"></div><div class="field"><label for="e-age">'+tx('field.age')+'</label><input id="e-age" type="number" inputmode="numeric" min="3" max="17" value="'+esc(k.age||'')+'"></div><div class="field"><label for="e-phone">'+tx('kid.phone')+'</label><input id="e-phone" type="tel" inputmode="tel" maxlength="20" autocomplete="off" value="'+esc(phoneShow(k.phone||''))+'"></div><button class="btn ghost block" type="submit">'+tx('btn.save')+'</button></form>'+
+   '<h3 class="sub">'+tx('kid.conn')+'</h3><p class="muted">'+tx('kid.login')+' <b>'+esc(k.login||k.pseudo)+'</b> · '+tx('kid.famcode')+' <b>'+esc(fmtCode(fam().code||''))+'</b></p><p id="k-pw-cur" class="muted"></p><button class="btn ghost block" type="button" data-a="kidPwShow" data-id="'+esc(k.id)+'">'+tx('kid.pw.show')+'</button><form data-submit="kidPw" data-id="'+esc(k.id)+'" style="margin-top:10px"><div class="field"><label for="k-pw">'+tx('field.newpass')+'</label><input id="k-pw" type="password" autocomplete="new-password"></div><button class="btn ghost block" type="submit">'+tx('sheet.changepass')+'</button></form>');
  },
  adjust:function(el){
    var k=P(el.dataset.id),n=numOf('a-n'),sign=parseInt(el.dataset.v,10),why=val('a-why');
    if(!k)return;
-   if(!(n>=1&&n<=1000))return setErr('Saisis un nombre de points entre 1 et 1000.');
-   if(sign<0&&bal(k.id)-n<0&&!negOk){negOk=1;return setErr('Cela rendrait le solde négatif. Appuie de nouveau sur Retirer pour confirmer.')}
+   if(!(n>=1&&n<=1000))return setErr(tx('err.adjpts'));
+   if(sign<0&&bal(k.id)-n<0&&!negOk){negOk=1;return setErr(tx('err.negative'))}
    negOk=0;
    var d=sign*n;
    return run(function(){
      return col('ledger').add({kid:k.id,delta:d,reason:why||(d>0?'Bonus':'Retrait'),at:Date.now(),type:'ajust',by:actorId()}).then(function(){
-       return notify(k.id,(d>0?'+':'')+d+' pts'+(why?' : '+why:'')+'.',d>0?'ok':'bad');
+       return notify(k.id,(d>0?'+':'')+d+' pts'+(why?tx('n.comment',{t:why}):'')+'.',d>0?'ok':'bad');
      });
-   },(d>0?'+':'')+d+' pts pour '+k.pseudo).then(function(ok){if(ok){if(!S.parentOk)closeSheet();else{var w=document.getElementById('a-why');if(w)w.value=''}}});
+   },tx('toast.ptsfor',{pts:(d>0?'+':'')+d,name:k.pseudo})).then(function(ok){if(ok){if(!S.parentOk)closeSheet();else{var w=document.getElementById('a-why');if(w)w.value=''}}});
  },
  editKid:function(f){
    var k=P(f.dataset.id),pseudo=val('e-pseudo'),age=numOf('e-age'),pv=val('e-phone'),pc=pv?phoneClean(pv):'';
    if(!k)return;
-   if(!pseudo)return setErr('Le pseudo ne peut pas être vide.');
-   if(!(age>=3&&age<=17))return setErr("L'âge doit être compris entre 3 et 17 ans.");
-   if(pv&&!pc)return setErr('Numéro invalide. Saisis 8 à 15 chiffres.');
-   return run(function(){return dref('people',k.id).update({pseudo:pseudo,age:age,phone:pc})},'Profil enregistré').then(function(ok){if(ok)closeSheet()});
+   if(!pseudo)return setErr(tx('err.pseudoempty'));
+   if(!(age>=3&&age<=17))return setErr(tx('err.age'));
+   if(pv&&!pc)return setErr(tx('err.phone8'));
+   return run(function(){return dref('people',k.id).update({pseudo:pseudo,age:age,phone:pc})},tx('toast.profilesaved')).then(function(ok){if(ok)closeSheet()});
  },
 
  /* Notifications */
  notifs:function(){
    var list=myNotifs(),m=me(),seen=(m&&m.seenAt)||0;
-   var bar='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="nt-all"> Tout</label><span class="muted" id="nt-count"></span><button class="btn ghost sm" id="nt-del" data-a="ntDel" disabled>'+ic('trash')+' Supprimer</button></div>';
-   openSheet('Notifications',list.length?bar+'<ul class="lst" id="nt-list">'+list.slice(0,40).map(function(n){return '<li class="'+(n.at>seen?'new':'')+'"><label class="nt-row"><input type="checkbox" class="nt-sel" data-id="'+esc(n.id)+'" aria-label="Sélectionner cette notification"><div class="grow"><span>'+esc(n.text)+'</span><small>'+ago(n.at)+'</small></div></label></li>'}).join('')+'</ul>':'<p class="muted">Rien pour l\'instant. Les messages apparaissent ici quand quelque chose change dans la famille.</p><p class="muted" style="margin-top:10px">'+(pushOn()?'Pour être prévenu sur le téléphone même quand l\'app est fermée, active les notifications dans ton profil.':'Ces notifications s\'affichent dans l\'app. Il n\'y a pas d\'alerte sur le téléphone quand l\'app est fermée.')+'</p>');
+   var bar='<div class="nt-bar"><label class="check-row" style="margin:0"><input type="checkbox" id="nt-all"> '+tx('sel.all')+'</label><span class="muted" id="nt-count"></span><button class="btn ghost sm" id="nt-del" data-a="ntDel" disabled>'+ic('trash')+' '+tx('btn.delete')+'</button></div>';
+   openSheet('Notifications',list.length?bar+'<ul class="lst" id="nt-list">'+list.slice(0,40).map(function(n){return '<li class="'+(n.at>seen?'new':'')+'"><label class="nt-row"><input type="checkbox" class="nt-sel" data-id="'+esc(n.id)+'" aria-label="'+tx('aria.selnotif')+'"><div class="grow"><span>'+esc(n.text)+'</span><small>'+ago(n.at)+'</small></div></label></li>'}).join('')+'</ul>':'<p class="muted">'+tx('nt.empty')+'</p><p class="muted" style="margin-top:10px">'+(pushOn()?tx('nt.pushon'):tx('nt.pushoff'))+'</p>');
    if(unread()>0&&!S.readonly)dref('people',S.pid).update({seenAt:Date.now()}).catch(function(){});
  },
  ntDel:function(el){
@@ -1512,7 +1528,7 @@ var A={
    var mine={};myNotifs().forEach(function(n){mine[n.id]=1});
    ids=ids.filter(function(i){return mine[i]});
    if(!ids.length)return;
-   return run(function(){var b=db.batch();ids.forEach(function(i){b.delete(dref('notifs',i))});return b.commit()},ids.length>1?ids.length+' notifications supprimées':'Notification supprimée').then(function(done){
+   return run(function(){var b=db.batch();ids.forEach(function(i){b.delete(dref('notifs',i))});return b.commit()},ids.length>1?tx('toast.ntdeleted.many',{n:ids.length}):tx('toast.ntdeleted.one')).then(function(done){
      if(!done)return;
      ids.forEach(function(i){var c=document.querySelector('.nt-sel[data-id="'+i+'"]'),li=c&&c.closest('li');if(li)li.remove()});
      ntSelUpdate();
@@ -1523,27 +1539,27 @@ var A={
  hlHide:function(){
    var ids=Object.keys(HL.sel);if(!ids.length)return;
    var o=hidGet();ids.forEach(function(i){o[i]=1});hidSave(o);HL.sel={};
-   toast(ids.length>1?ids.length+' lignes masquées':'Ligne masquée');render();
+   toast(ids.length>1?tx('toast.hidden.many',{n:ids.length}):tx('toast.hidden.one'));render();
  },
  hlHideAll:function(el){
    if(!HL.rows.length)return;
    if(arm(el))return;
    var o=hidGet();HL.rows.forEach(function(i){o[i]=1});hidSave(o);HL.sel={};
-   toast('Historique masqué');render();
+   toast(tx('toast.histhidden'));render();
  },
- hlShow:function(){LS.del(hlKey());HL.sel={};toast('Lignes réaffichées');render()}
+ hlShow:function(){LS.del(hlKey());HL.sel={};toast(tx('toast.shown'));render()}
 };
 function ntSelected(){return Array.prototype.map.call(document.querySelectorAll('.nt-sel:checked'),function(c){return c.dataset.id})}
 function ntSelUpdate(){
   var all=document.querySelectorAll('.nt-sel'),n=ntSelected().length;
   var c=document.getElementById('nt-count'),d=document.getElementById('nt-del'),a=document.getElementById('nt-all');
-  if(c)c.textContent=n?n+(n>1?' sélectionnées':' sélectionnée'):'';
+  if(c)c.textContent=n?tn('sel.count',n):'';
   if(d)d.disabled=!n;
   if(a)a.checked=n>0&&n===all.length;
 }
 function arm(el){
   if(el.dataset.armed)return false;
-  el.dataset.armed='1';var old=el.innerHTML;el.innerHTML='Confirmer ?';el.classList.add('bad');
+  el.dataset.armed='1';var old=el.innerHTML;el.innerHTML=tx('btn.confirm');el.classList.add('bad');
   setTimeout(function(){if(el.isConnected){delete el.dataset.armed;el.innerHTML=old;el.classList.remove('bad')}},3000);
   return true;
 }
