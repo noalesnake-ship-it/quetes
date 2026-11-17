@@ -176,6 +176,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;
 .auth h1{font-size:30px;line-height:1.1}
 .brand{display:grid;justify-items:start;gap:12px;margin:18px 0 26px}
 .brand h1{font-size:36px}
+.brand-img{display:block;width:min(250px,78%);height:auto}
 .lead{color:var(--ink-2);font-size:17px;max-width:40ch}
 .role{display:grid;gap:4px;width:100%;text-align:left;border:0;border-radius:18px;padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
 .role b{font:700 24px var(--f-display)}
@@ -1641,7 +1642,7 @@ function forget(){S.lk=null;S.lkSel='';S.chan='family';S.qf='all';stopFamily();L
 /* ---------- Vues d'accueil ---------- */
 var vLoading=function(){return '<div class="center"><span class="coin big spin">'+ic('star')+'</span><p class="muted">'+(S.slow?tx('load.slow'):tx('load.opening'))+'</p>'+(S.slow&&S.fid?'<button class="link" data-a="leave">'+tx('load.leave')+'</button>':'')+'</div>'};
 var vBlocked=function(){return '<div class="center"><h1>'+tx('blocked.title')+'</h1><p class="muted">'+tx('blocked.text')+'</p></div>'};
-var vWelcome=function(){return '<section class="auth"><div class="brand"><span class="coin big">'+ic('star')+'</span><h1>FamilyQuest</h1><p class="lead">'+tx('welcome.lead')+'</p></div>'+
+var vWelcome=function(){return '<section class="auth"><div class="brand"><svg class="brand-img" viewBox="0 0 310 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><g id="qf-p" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="14" r="12" fill="currentColor" stroke="none"/><path d="M22 30h16l9 36H13z" fill="currentColor" stroke="none"/><path d="M23 35L5 53M37 35l18 18" fill="none" stroke="currentColor" stroke-width="7"/><path d="M25 66v24M35 66v24" fill="none" stroke="currentColor" stroke-width="7"/></g><clipPath id="qf-r"><rect x="30" y="0" width="40" height="100"/></clipPath></defs><g transform="translate(0 0)"><g style="color:#F5A04B"><use href="#qf-p"/></g><g style="color:#FAC987" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g><g transform="translate(50 0)"><g style="color:#FBE94B"><use href="#qf-p"/></g><g style="color:#FDF3A3" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g><g transform="translate(100 0)"><g style="color:#8CCB5E"><use href="#qf-p"/></g><g style="color:#BCE39B" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g><g transform="translate(150 0)"><g style="color:#5B93E8"><use href="#qf-p"/></g><g style="color:#9DBDF2" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g><g transform="translate(200 0)"><g style="color:#9A5CC7"><use href="#qf-p"/></g><g style="color:#B98FDB" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g><g transform="translate(250 0)"><g style="color:#F06C92"><use href="#qf-p"/></g><g style="color:#F7A3BC" clip-path="url(#qf-r)"><use href="#qf-p"/></g></g></svg><h1>FamilyQuest</h1><p class="lead">'+tx('welcome.lead')+'</p></div>'+
  '<button class="role t" data-a="role" data-v="tutor"><b>'+tx('welcome.tutor')+'</b><span>'+tx('welcome.tutor2')+'</span></button>'+
  '<button class="role k" data-a="role" data-v="kid"><b>'+tx('welcome.kid')+'</b><span>'+tx('welcome.kid2')+'</span></button><button class="link" data-a="login">'+tx('welcome.login')+'</button><button class="link" data-a="lang" style="display:block;padding-top:0">'+tx('lang.other')+'</button></section>'};
 function vTutor(){
