@@ -700,7 +700,6 @@ input[type=file]{width:100%}
 "field.curpass":"Mot de passe actuel",
 "mail.current":"Adresse actuelle :",
 "mail.new":"Nouvelle adresse e-mail",
-"mail.secure":"Par sécurité, on vérifie que c'est bien toi.",
 "mail.send":"Envoyer le lien de confirmation",
 "menu.changemail":"Changer mon adresse e-mail",
 "menu.changepass":"Changer mon mot de passe",
@@ -803,7 +802,16 @@ input[type=file]{width:100%}
 "price.accept":"Accepter et fixer le prix",
 "price.orrefuse":"Ou refuser",
 "price.decline":"Refuser la demande",
-"btn.confirm":"Confirmer ?"
+"btn.confirm":"Confirmer ?",
+"mail.secure":"Par sécurité, on vérifie que c'est bien toi. Un lien est envoyé à la nouvelle adresse : elle ne change qu'après ton clic.",
+"verif.title":"Confirme ton adresse e-mail",
+"verif.text":"Un lien de confirmation a été envoyé à {mail}. Sans confirmation, certaines fonctions (abonnement) restent bloquées. Pense à regarder les courriers indésirables.",
+"verif.resend":"Renvoyer le lien",
+"verif.check":"J'ai confirmé",
+"verif.sent":"Lien de confirmation envoyé.",
+"verif.error":"Impossible pour le moment. Réessaie dans quelques minutes.",
+"verif.ok":"Adresse e-mail confirmée.",
+"verif.notyet":"Pas encore confirmée : clique d'abord sur le lien reçu par e-mail."
 };
 
 /* FamilyQuest : texts in English. Modifie le texte entre guillemets, jamais la clé à gauche. */
@@ -1240,7 +1248,6 @@ input[type=file]{width:100%}
 "field.curpass":"Current password",
 "mail.current":"Current address:",
 "mail.new":"New email address",
-"mail.secure":"For security, we check that it's really you.",
 "mail.send":"Send the confirmation link",
 "menu.changemail":"Change my email address",
 "menu.changepass":"Change my password",
@@ -1343,14 +1350,23 @@ input[type=file]{width:100%}
 "price.accept":"Accept and set the price",
 "price.orrefuse":"Or decline",
 "price.decline":"Decline the request",
-"btn.confirm":"Confirm?"
+"btn.confirm":"Confirm?",
+"mail.secure":"For security, we check it's really you. A link is sent to the new address: it only changes after you click it.",
+"verif.title":"Confirm your email address",
+"verif.text":"A confirmation link was sent to {mail}. Until you confirm, some features (subscription) stay locked. Check your spam folder too.",
+"verif.resend":"Resend the link",
+"verif.check":"I have confirmed",
+"verif.sent":"Confirmation link sent.",
+"verif.error":"Not possible right now. Try again in a few minutes.",
+"verif.ok":"Email address confirmed.",
+"verif.notyet":"Not confirmed yet: first click the link in the email you received."
 };
 
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
 import { getFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, sendPasswordResetEmail, deleteUser, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
 
 const cfg = {
   "apiKey": "AIzaSyDamgo5t-QPHjOoazkp1n5xzgL-HwsKfWk",
@@ -1401,7 +1417,10 @@ window.QFB = {
   db: { doc: docRef, collection: colRef },
   onAuth: cb => onAuthStateChanged(auth, u => cb(u ? { uid: u.uid, email: u.email } : null)),
   signIn: (e, p) => signInWithEmailAndPassword(auth, e, p).then(c => c.user.uid),
-  register: (e, p) => createUserWithEmailAndPassword(auth, e, p).then(c => c.user.uid),
+  register: (e, p) => createUserWithEmailAndPassword(auth, e, p).then(c => { sendEmailVerification(c.user).catch(() => {}); return c.user.uid; }),
+  verified: () => !!(auth.currentUser && auth.currentUser.emailVerified),
+  sendVerif: () => sendEmailVerification(auth.currentUser),
+  recheck: async () => { const u = auth.currentUser; await u.reload(); await u.getIdToken(true); return !!u.emailVerified; },
   registerOther: async (e, p) => { const c = await createUserWithEmailAndPassword(secAuth, e, p); const uid = c.user.uid; await signOut(secAuth); return uid; },
   setPasswordOther: async (e, oldp, newp) => { const c = await signInWithEmailAndPassword(secAuth, e, oldp); await updatePassword(c.user, newp); await signOut(secAuth); },
   setPassword: p => updatePassword(auth.currentUser, p),
@@ -1846,7 +1865,8 @@ function vApp(){
     return 0;
   };
   var nav='<nav class="tabs" aria-label="'+tx('aria.sections')+'"><div class="tabs-in">'+tabs.map(function(x){var n=badge(x[0]);return '<button class="tab'+(S.tab===x[0]?' on':'')+'" data-a="tab" data-v="'+x[0]+'"'+(S.tab===x[0]?' aria-current="page"':'')+'><span class="w">'+ic(x[2])+(n?'<span class="dot">'+n+'</span>':'')+'</span>'+x[1]+'</button>'}).join('')+'</div></nav>';
-  return head+banner+'<main>'+noticeBanner()+(S.tab==='quetes'?famGoalCard():'')+views[S.tab]()+'</main>'+nav;
+  var vb=(t&&window.QFB.email()&&!window.QFB.verified())?'<div class="notice"><b>'+tx('verif.title')+'</b> · '+tx('verif.text',{mail:esc(window.QFB.email())})+'<br><button class="link" data-a="verifSend">'+tx('verif.resend')+'</button> · <button class="link" data-a="verifCheck">'+tx('verif.check')+'</button></div>':'';
+  return head+banner+vb+'<main>'+noticeBanner()+(S.tab==='quetes'?famGoalCard():'')+views[S.tab]()+'</main>'+nav;
 }
 
 /* ---------- Rendu ---------- */
@@ -2123,6 +2143,8 @@ var A={
    return run(function(){return dref('people',m.id).update({phone:c})},v?tx('toast.phonesaved'):tx('toast.phonedeleted')).then(function(ok){if(ok)closeSheet()});
  },
  close:closeSheet,
+ verifSend:function(){window.QFB.sendVerif().then(function(){toast(tx('verif.sent'))}).catch(function(){toast(tx('verif.error'),true)})},
+ verifCheck:function(){window.QFB.recheck().then(function(v){toast(v?tx('verif.ok'):tx('verif.notyet'),!v);render()}).catch(function(){toast(tx('verif.error'),true)})},
  lang:function(){LS.set('qf-lang',LANG==='fr'?'en':'fr');location.reload()},
  ntToggle:function(){
    if(!ntSupported()){closeSheet();toast(tx('nt.unavailable'),true);return}
