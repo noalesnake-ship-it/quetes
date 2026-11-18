@@ -813,7 +813,25 @@ input[type=file]{width:100%}
 "verif.sent":"Lien de confirmation envoyé.",
 "verif.error":"Impossible pour le moment. Réessaie dans quelques minutes.",
 "verif.ok":"Adresse e-mail confirmée.",
-"verif.notyet":"Pas encore confirmée : clique d'abord sur le lien reçu par e-mail."
+"verif.notyet":"Pas encore confirmée : clique d'abord sur le lien reçu par e-mail.",
+"menu.help":"Aide : comment ça marche",
+"help.title":"Comment ça marche",
+"help.close":"Fermer",
+"help.intro.t":"FamilyQuest transforme les tâches de la maison en quêtes qui rapportent des points. Voici l'essentiel pour un tuteur.",
+"help.intro.k":"FamilyQuest transforme les tâches de la maison en quêtes qui rapportent des points. Voici comment ça marche pour toi.",
+"help.t.1":"Créer la famille ¦ Le premier tuteur crée la famille et reçoit un code famille. Ajoute les mineurs dans l'onglet {f}, puis donne à chacun le code famille, son identifiant et son mot de passe.",
+"help.t.2":"Publier une quête ¦ Dans l'onglet {q}, ajoute une quête : titre, points, mineur concerné, date limite et étapes si besoin. Une quête peut se relancer après chaque validation.",
+"help.t.3":"Valider le travail ¦ Quand un mineur termine une quête, elle arrive dans l'onglet {a}. Valide-la pour donner les points (avec un bonus et un mot si tu veux), ou renvoie-la à refaire.",
+"help.t.4":"Récompenses ¦ Dans l'onglet {r}, crée des récompenses avec un prix en points. Le mineur les échange, puis tu les lui remets et tu les marques comme remises. Il peut aussi proposer une envie : tu fixes le prix.",
+"help.t.5":"Ajuster les points ¦ Depuis la fiche d'un mineur dans l'onglet {f}, tu peux ajouter ou retirer des points, avec une raison qu'il peut lire.",
+"help.t.6":"Chat et notifications ¦ L'onglet {c} sert à discuter en famille. Active les notifications dans ce menu pour être prévenu même quand l'app est fermée.",
+"help.t.7":"Inviter un autre parent ¦ Il choisit « Je suis tuteur », saisit le code famille et le code tuteur. Tu peux changer ce code dans ce menu.",
+"help.k.1":"Mes quêtes ¦ Dans l'onglet {q}, tu vois les quêtes qu'un tuteur t'a données. Ouvre-les pour lire les détails et cocher les étapes.",
+"help.k.2":"Terminer une quête ¦ Quand c'est fait, termine-la et ajoute un petit mot si tu veux. Elle part chez un tuteur pour être validée.",
+"help.k.3":"Gagner des points ¦ Quand un tuteur valide, tu reçois les points. Ils s'affichent en haut et dans l'onglet {p}. Attention à la date limite : après, la quête ne rapporte plus de points.",
+"help.k.4":"Récompenses ¦ Dans l'onglet {r}, échange tes points contre une récompense, ou propose une envie avec « Je voudrais… ». Un tuteur fixe le prix.",
+"help.k.5":"Chat et notifications ¦ L'onglet {c} sert à discuter en famille. Active les notifications dans ce menu pour être prévenu même quand l'app est fermée.",
+"help.k.6":"Se connecter ¦ Tu te connectes avec le code famille, ton prénom et ton mot de passe. Si tu l'as oublié, demande à un tuteur."
 };
 
 /* FamilyQuest : texts in English. Modifie le texte entre guillemets, jamais la clé à gauche. */
@@ -1361,7 +1379,25 @@ input[type=file]{width:100%}
 "verif.sent":"Confirmation link sent.",
 "verif.error":"Not possible right now. Try again in a few minutes.",
 "verif.ok":"Email address confirmed.",
-"verif.notyet":"Not confirmed yet: first click the link in the email you received."
+"verif.notyet":"Not confirmed yet: first click the link in the email you received.",
+"menu.help":"Help: how it works",
+"help.title":"How it works",
+"help.close":"Close",
+"help.intro.t":"FamilyQuest turns household chores into quests that earn points. Here are the basics for a guardian.",
+"help.intro.k":"FamilyQuest turns household chores into quests that earn points. Here is how it works for you.",
+"help.t.1":"Create the family ¦ The first guardian creates the family and gets a family code. Add the children in the {f} tab, then give each one the family code, their username and their password.",
+"help.t.2":"Publish a quest ¦ In the {q} tab, add a quest: title, points, which child it is for, a deadline and steps if needed. A quest can restart after each approval.",
+"help.t.3":"Approve the work ¦ When a child finishes a quest, it shows up in the {a} tab. Approve it to give the points (with a bonus and a message if you like), or send it back to redo.",
+"help.t.4":"Rewards ¦ In the {r} tab, create rewards with a price in points. The child exchanges points for them, then you hand it over and mark it as delivered. A child can also suggest a wish: you set the price.",
+"help.t.5":"Adjust points ¦ From a child's profile in the {f} tab, you can add or remove points, with a reason the child can read.",
+"help.t.6":"Chat and notifications ¦ The {c} tab is for talking as a family. Turn on notifications in this menu to be alerted even when the app is closed.",
+"help.t.7":"Invite another parent ¦ They choose “I'm a guardian”, then enter the family code and the guardian code. You can change that code in this menu.",
+"help.k.1":"My quests ¦ In the {q} tab you see the quests a guardian gave you. Open them to read the details and tick the steps.",
+"help.k.2":"Finish a quest ¦ When it is done, finish it and add a short note if you like. It goes to a guardian for approval.",
+"help.k.3":"Earn points ¦ When a guardian approves, you get the points. They show at the top and in the {p} tab. Watch the deadline: after it, the quest no longer earns points.",
+"help.k.4":"Rewards ¦ In the {r} tab, exchange your points for a reward, or suggest a wish with “I would like…”. A guardian sets the price.",
+"help.k.5":"Chat and notifications ¦ The {c} tab is for talking as a family. Turn on notifications in this menu to be alerted even when the app is closed.",
+"help.k.6":"Sign in ¦ You sign in with the family code, your name and your password. If you forgot it, ask a guardian."
 };
 
 </script>
@@ -2158,7 +2194,13 @@ var A={
  },
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
  menu:function(){
-   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">'+tx('menu.signout')+'</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?tx('menu.photochange'):tx('menu.photoadd'))+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">'+tx('menu.pin')+'</button>':'')+'<button class="btn ghost block" data-a="colorSheet">'+tx('menu.color')+'</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">'+tx('menu.changepass')+'</button><button class="btn ghost block" data-a="mailSheet">'+tx('menu.changemail')+'</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?tx('menu.phoneedit'):tx('menu.phoneadd'))+'</button><button class="btn ghost block" data-a="lang">'+tx('lang.other')+'</button></div>');
+   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">'+tx('menu.signout')+'</button>'+'<button class="btn ghost block" data-a="helpSheet">'+tx('menu.help')+'</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?tx('menu.photochange'):tx('menu.photoadd'))+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">'+tx('menu.pin')+'</button>':'')+'<button class="btn ghost block" data-a="colorSheet">'+tx('menu.color')+'</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">'+tx('menu.changepass')+'</button><button class="btn ghost block" data-a="mailSheet">'+tx('menu.changemail')+'</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?tx('menu.phoneedit'):tx('menu.phoneadd'))+'</button><button class="btn ghost block" data-a="lang">'+tx('lang.other')+'</button></div>');
+ },
+ helpSheet:function(){
+   var t=isT(),p={a:tx('tab.approve'),q:tx('tab.quests'),r:tx('tab.rewards'),c:tx('tab.chat'),f:tx('tab.family'),p:tx('tab.points')};
+   var n=t?7:6,h='<p class="muted">'+tx(t?'help.intro.t':'help.intro.k')+'</p>';
+   for(var i=1;i<=n;i++){var s=tx('help.'+(t?'t':'k')+'.'+i,p).split('¦');h+='<p style="margin-top:12px"><b>'+i+'. '+esc(s[0])+'</b><br>'+esc(s[1]||'')+'</p>'}
+   openSheet(tx('help.title'),h+'<button class="btn ghost block" style="margin-top:16px" data-a="close">'+tx('help.close')+'</button>');
  },
  'switch':function(){closeSheet();signOutAll();render()},
  leave:function(){closeSheet();signOutAll();render()},
