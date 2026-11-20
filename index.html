@@ -791,7 +791,7 @@ input[type=file]{width:100%}
 "bg.rayures":"Rayures",
 "bg.damier":"Damier",
 "bg.etoiles":"Étoiles",
-"redo.pastdue":"La date limite est dépassée. Après le renvoi, la quête sera expirée, sauf si tu repousses la date avec « Modifier ».",
+"redo.pastdue":"La date limite est dépassée. En renvoyant la quête, une nouvelle date limite de 24 h est fixée automatiquement pour laisser le temps de la refaire.",
 "redo.label":"Ce qu'il reste à faire (facultatif)",
 "redo.ph":"Il reste du linge par terre.",
 "redo.send":"Renvoyer la quête",
@@ -1357,7 +1357,7 @@ input[type=file]{width:100%}
 "bg.rayures":"Stripes",
 "bg.damier":"Checkerboard",
 "bg.etoiles":"Stars",
-"redo.pastdue":"The deadline has passed. After sending it back, the quest will be expired, unless you push the date back with “Edit”.",
+"redo.pastdue":"The deadline has passed. When you send it back, a new 24-hour deadline is set automatically so there is time to redo it.",
 "redo.label":"What is left to do (optional)",
 "redo.ph":"There is still laundry on the floor.",
 "redo.send":"Send the quest back",
@@ -2548,10 +2548,10 @@ var A={
    openSheet(tx('btn.redo'),'<p><b>'+esc(q.title)+'</b> · '+esc(nameOf(q.doneBy))+'</p>'+(q.deadline&&q.deadline<Date.now()?'<p class="note">'+tx('redo.pastdue')+'</p>':'')+'<form data-submit="refuse" data-id="'+esc(q.id)+'" style="margin-top:12px"><div class="field"><label for="r-why">'+tx('redo.label')+'</label><textarea id="r-why" maxlength="160" placeholder="'+tx('redo.ph')+'"></textarea></div><button class="btn block" type="submit">'+tx('redo.send')+'</button></form>');
  },
  refuse:function(f){
-   var q=Q(f.dataset.id);if(!q||q.status!=='a_valider')return;var why=val('r-why'),kid=q.doneBy;
+   var q=Q(f.dataset.id);if(!q||q.status!=='a_valider')return;var why=val('r-why'),kid=q.doneBy,nd=(q.deadline&&q.deadline<Date.now())?Date.now()+864e5:0;
    return run(function(){
-     return dref('quests',q.id).update({status:'open',doneBy:'',doneAt:0,refusal:why||'À refaire'}).then(function(){
-       return notify(kid,tx('n.redo',{t:q.title})+(why?tx('n.comment',{t:why}):'')+'.','bad');
+     return dref('quests',q.id).update(Object.assign({status:'open',doneBy:'',doneAt:0,refusal:why||'À refaire'},nd?{deadline:nd}:{})).then(function(){
+       return notify(kid,tx('n.redo',{t:q.title})+(why?tx('n.comment',{t:why}):'')+(nd?' · '+tx('n.due',{d:fmtDue(nd)}):'')+'.','bad');
      });
    },tx('toast.questsent')).then(function(ok){if(ok)closeSheet()});
  },
