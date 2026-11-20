@@ -832,19 +832,7 @@ input[type=file]{width:100%}
 "help.k.4":"Récompenses ¦ Dans l'onglet {r}, échange tes points contre une récompense, ou propose une envie avec « Je voudrais… ». Un tuteur fixe le prix.",
 "help.k.5":"Chat et notifications ¦ L'onglet {c} sert à discuter en famille. Active les notifications dans ce menu pour être prévenu même quand l'app est fermée.",
 "help.k.6":"Se connecter ¦ Tu te connectes avec le code famille, ton prénom et ton mot de passe. Si tu l'as oublié, demande à un tuteur.",
-"lang.title":"Langue",
-"menu.sub":"Abonnement",
-"sub.intro":"L'abonnement est géré par famille : un seul tuteur paie, tous les tuteurs et les mineurs en profitent.",
-"sub.plan.free":"Pas d'abonnement",
-"sub.plan.paid":"Abonnement actif",
-"sub.plan.gift":"Famille offerte",
-"sub.until":"jusqu'au {d}",
-"sub.needverif":"Confirme d'abord ton adresse e-mail (lien reçu par e-mail) pour pouvoir t'abonner.",
-"sub.gift":"Cette famille bénéficie de l'accès gratuit. Rien à payer.",
-"sub.manage":"Gérer ou résilier mon abonnement",
-"sub.buy":"S'abonner",
-"sub.terms":"1,99 € par mois après 30 jours d'essai gratuit. Résiliable à tout moment. Tu peux saisir un code promo sur la page de paiement.",
-"sub.error":"Impossible d'ouvrir la page de paiement pour le moment. Réessaie plus tard."
+"lang.title":"Langue"
 };
 
 /* FamilyQuest : texts in English. Modifie le texte entre guillemets, jamais la clé à gauche. */
@@ -1411,19 +1399,7 @@ input[type=file]{width:100%}
 "help.k.4":"Rewards ¦ In the {r} tab, exchange your points for a reward, or suggest a wish with “I would like…”. A guardian sets the price.",
 "help.k.5":"Chat and notifications ¦ The {c} tab is for talking as a family. Turn on notifications in this menu to be alerted even when the app is closed.",
 "help.k.6":"Sign in ¦ You sign in with the family code, your name and your password. If you forgot it, ask a guardian.",
-"lang.title":"Language",
-"menu.sub":"Subscription",
-"sub.intro":"The subscription is per family: one guardian pays, and all guardians and children benefit.",
-"sub.plan.free":"No subscription",
-"sub.plan.paid":"Active subscription",
-"sub.plan.gift":"Free family",
-"sub.until":"until {d}",
-"sub.needverif":"First confirm your email address (link sent by email) to be able to subscribe.",
-"sub.gift":"This family has free access. Nothing to pay.",
-"sub.manage":"Manage or cancel my subscription",
-"sub.buy":"Subscribe",
-"sub.terms":"€1.99 per month after a 30-day free trial. Cancel anytime. You can enter a promo code on the payment page.",
-"sub.error":"Couldn't open the payment page right now. Try again later."
+"lang.title":"Language"
 };
 
 /* FamilyQuest : textos en español. Modifie le texte entre guillemets, jamais la clé à gauche. */
@@ -1990,19 +1966,7 @@ input[type=file]{width:100%}
 "help.k.4":"Recompensas ¦ En la pestaña {r}, canjea tus puntos por una recompensa o propón un deseo con «Me gustaría…». Un tutor fija el precio.",
 "help.k.5":"Chat y notificaciones ¦ La pestaña {c} sirve para hablar en familia. Activa las notificaciones en este menú para recibir avisos incluso con la app cerrada.",
 "help.k.6":"Iniciar sesión ¦ Entras con el código de familia, tu nombre y tu contraseña. Si la olvidaste, pídesela a un tutor.",
-"lang.title":"Idioma",
-"menu.sub":"Suscripción",
-"sub.intro":"La suscripción es por familia: un solo tutor paga y todos los tutores y menores se benefician.",
-"sub.plan.free":"Sin suscripción",
-"sub.plan.paid":"Suscripción activa",
-"sub.plan.gift":"Familia gratuita",
-"sub.until":"hasta el {d}",
-"sub.needverif":"Confirma primero tu correo electrónico (enlace recibido por correo) para poder suscribirte.",
-"sub.gift":"Esta familia tiene acceso gratuito. No hay nada que pagar.",
-"sub.manage":"Gestionar o cancelar mi suscripción",
-"sub.buy":"Suscribirme",
-"sub.terms":"1,99 € al mes tras 30 días de prueba gratuita. Cancelable en cualquier momento. Puedes escribir un código promocional en la página de pago.",
-"sub.error":"No se puede abrir la página de pago por ahora. Inténtalo más tarde."
+"lang.title":"Idioma"
 };
 
 </script>
@@ -2062,7 +2026,6 @@ window.QFB = {
   signIn: (e, p) => signInWithEmailAndPassword(auth, e, p).then(c => c.user.uid),
   register: (e, p) => createUserWithEmailAndPassword(auth, e, p).then(c => { sendEmailVerification(c.user).catch(() => {}); return c.user.uid; }),
   verified: () => !!(auth.currentUser && auth.currentUser.emailVerified),
-  idToken: () => auth.currentUser.getIdToken(),
   sendVerif: () => sendEmailVerification(auth.currentUser),
   recheck: async () => { const u = auth.currentUser; await u.reload(); await u.getIdToken(true); return !!u.emailVerified; },
   registerOther: async (e, p) => { const c = await createUserWithEmailAndPassword(secAuth, e, p); const uid = c.user.uid; await signOut(secAuth); return uid; },
@@ -2099,8 +2062,6 @@ var langPicker=function(){return '<div class="field" style="margin:4px 0 0"><spa
 var langLinks=function(){return '<div style="display:flex;gap:18px;padding-top:0;flex-wrap:wrap">'+LANGS.map(function(l){return '<button class="link" data-a="lang" data-v="'+l[0]+'"'+(l[0]===LANG?' style="font-weight:800" aria-current="true"':'')+'>'+l[1]+'</button>'}).join('')+'</div>'};
 function bytes(n){var a=new Uint8Array(n);try{crypto.getRandomValues(a)}catch(e){for(var i=0;i<n;i++)a[i]=Math.floor(Math.random()*256)}return a}
 var rid=function(){return Array.prototype.map.call(bytes(6),function(b){return ('0'+b.toString(36)).slice(-2)}).join('')};
-var BILL={url:'https://familyquest-billing.noa-lesnake.workers.dev'};
-var billCall=function(path){return window.QFB.idToken().then(function(t){return fetch(BILL.url+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({idToken:t,fid:S.fid,lang:LANG})})}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'x');return j})})};
 var ALPHA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 var genCode=function(){return Array.prototype.map.call(bytes(6),function(b){return ALPHA[b%ALPHA.length]}).join('')};
 var cleanCode=function(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')};
@@ -2514,7 +2475,6 @@ function vApp(){
     return 0;
   };
   var nav='<nav class="tabs" aria-label="'+tx('aria.sections')+'"><div class="tabs-in">'+tabs.map(function(x){var n=badge(x[0]);return '<button class="tab'+(S.tab===x[0]?' on':'')+'" data-a="tab" data-v="'+x[0]+'"'+(S.tab===x[0]?' aria-current="page"':'')+'><span class="w">'+ic(x[2])+(n?'<span class="dot">'+n+'</span>':'')+'</span>'+x[1]+'</button>'}).join('')+'</div></nav>';
-  if(t&&window.QFB.email()&&window.QFB.verified()&&!S.synced){S.synced=1;billCall('/sync').catch(function(){})}
   var vb=(t&&window.QFB.email()&&!window.QFB.verified())?'<div class="notice"><b>'+tx('verif.title')+'</b> · '+tx('verif.text',{mail:esc(window.QFB.email())})+'<br><button class="link" data-a="verifSend">'+tx('verif.resend')+'</button> · <button class="link" data-a="verifCheck">'+tx('verif.check')+'</button></div>':'';
   return head+banner+vb+'<main>'+noticeBanner()+(S.tab==='quetes'?famGoalCard():'')+views[S.tab]()+'</main>'+nav;
 }
@@ -2806,19 +2766,8 @@ var A={
  },
  tab:function(el){S.tab=el.dataset.v;if(S.tab==='chat')S.stick=true;render();if(S.tab!=='chat')window.scrollTo(0,0)},
  menu:function(){
-   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">'+tx('menu.signout')+'</button>'+'<button class="btn ghost block" data-a="helpSheet">'+tx('menu.help')+'</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?tx('menu.photochange'):tx('menu.photoadd'))+'</button>'+(isT()?'<button class="btn ghost block" data-a="subSheet">'+tx('menu.sub')+'</button>':'')+(isT()?'<button class="btn ghost block" data-a="pinSheet">'+tx('menu.pin')+'</button>':'')+'<button class="btn ghost block" data-a="colorSheet">'+tx('menu.color')+'</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">'+tx('menu.changepass')+'</button><button class="btn ghost block" data-a="mailSheet">'+tx('menu.changemail')+'</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?tx('menu.phoneedit'):tx('menu.phoneadd'))+'</button></div>'+langPicker()+'<div></div>');
+   openSheet(me().pseudo,'<div class="acts" style="display:grid;gap:10px"><button class="btn block" data-a="switch">'+tx('menu.signout')+'</button>'+'<button class="btn ghost block" data-a="helpSheet">'+tx('menu.help')+'</button>'+'<button class="btn ghost block" data-a="photoSheet">'+(okPhoto(me().photo)?tx('menu.photochange'):tx('menu.photoadd'))+'</button>'+(isT()?'<button class="btn ghost block" data-a="pinSheet">'+tx('menu.pin')+'</button>':'')+'<button class="btn ghost block" data-a="colorSheet">'+tx('menu.color')+'</button>'+(isT()?'<button class="btn ghost block" data-a="passSheet">'+tx('menu.changepass')+'</button><button class="btn ghost block" data-a="mailSheet">'+tx('menu.changemail')+'</button>':'')+'<button class="btn ghost block" data-a="ntToggle">'+ntLabel()+'</button><button class="btn ghost block" data-a="phoneSheet">'+(me().phone?tx('menu.phoneedit'):tx('menu.phoneadd'))+'</button></div>'+langPicker()+'<div></div>');
  },
- subSheet:function(){
-   var b=fam().billing||{},plan=(b.plan==='paid'||b.plan==='gift')?b.plan:'free',ok=window.QFB.verified();
-   var h='<p class="muted">'+tx('sub.intro')+'</p><p style="margin-top:14px"><span class="chip'+(plan==='free'?'':' ok')+'">'+tx('sub.plan.'+plan)+'</span>'+(plan==='paid'&&b.until?' · '+esc(tx('sub.until',{d:new Date(Number(b.until)).toLocaleDateString(LOC,{day:'numeric',month:'long',year:'numeric'})})):'')+'</p>';
-   if(!ok&&plan==='free')h+='<p class="note" style="margin-top:12px">'+tx('sub.needverif')+'</p>';
-   if(plan==='gift')h+='<p class="muted" style="margin-top:12px">'+tx('sub.gift')+'</p>';
-   else if(plan==='paid')h+='<button class="btn block" style="margin-top:16px" data-a="subPortal">'+tx('sub.manage')+'</button>';
-   else h+='<button class="btn block" style="margin-top:16px" data-a="subBuy"'+(ok?'':' disabled')+'>'+tx('sub.buy')+'</button><p class="muted" style="margin-top:10px">'+tx('sub.terms')+'</p>';
-   openSheet(tx('menu.sub'),h);
- },
- subBuy:function(el){el.disabled=true;billCall('/checkout').then(function(j){location.href=j.url}).catch(function(){el.disabled=false;toast(tx('sub.error'),true)})},
- subPortal:function(el){el.disabled=true;billCall('/portal').then(function(j){location.href=j.url}).catch(function(){el.disabled=false;toast(tx('sub.error'),true)})},
  helpSheet:function(){
    var t=isT(),p={a:tx('tab.approve'),q:tx('tab.quests'),r:tx('tab.rewards'),c:tx('tab.chat'),f:tx('tab.family'),p:tx('tab.points')};
    var n=t?7:6,h='<p class="muted">'+tx(t?'help.intro.t':'help.intro.k')+'</p>';
